@@ -1,0 +1,39 @@
+---
+name: retcon-wifi-mesh
+mmdebstrap:
+#  mirrors:
+    # Could add repos and components here for bespoke packages only from this repo, eg
+    # deb http://example.org/debian bookworm acme-dev
+#  setup-hooks:
+    # Install keys for accessing the above repo, eg
+    # mkdir -p $1/etc/apt/trusted.gpg.d/
+    # cp $IGconf_acme_keydir/acme.gpg.key | gpg --dearmor > $1/etc/apt/trusted.gpg.d/acme.gpg
+  customize-hooks:
+    # Could perform ops here after the chroot is set up and all packages got installed, eg
+  - cp $IGconf_ext_nsdir/setup-wifi-mesh $1/home/$IGconf_device_user1
+  - |-
+    chroot $1 bash -- <<- EOCHROOT
+    source /home/$IGconf_device_user1/setup-wifi-mesh
+    #install_secrets $IGconf_device_user1 $IGconf_acme_dev_server
+    touch /home/$IGconf_device_user1/retcon.INSTALLED
+    echo "@reboot $IGconf_device_user1/retcon/start_retcon.sh" > /var/spool/cron/crontabs/$IGconf_device_user1
+    printenv > /home/$IGconf_device_user1/retcon.ENV
+    chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1
+    EOCHROOT
+  #cleanup-hooks:
+  #  - shred --verbose -u --zero $1/home/$IGconf_device_user1/setup-functions
+  packages:
+    - bash
+    - polkitd-pkla
+    - policykit-1
+    - iw
+    - libdbus-glib-1-dev 
+    - libdbus-1-dev
+    - dbus 
+    - firmware-brcm80211
+    - firmware-atheros
+    - wireless-tools
+    - wireless-regdb
+    - wpasupplicant
+    - dns-root-data
+    - dnsmasq-base

@@ -1,0 +1,20 @@
+# This dir will get passed to the rootfs install, see acme/acme-sdk-v1.yaml
+#acme_keydir=/path/to/dir
+# Empty lines are supported
+
+device_hostname=retcon-transport
+device_user1=retcon
+device_user1pass=retcon
+
+
+device_ssh_user1=n
+
+# Default locale
+locale1="en_US.UTF-8"
+
+# Default keymap
+keyboard_keymap=us
+
+# Default keyboard layout
+# debconf-show keyboard-configuration keyboard-configuration/xkb-keymap
+keyboard_layout="English (US)"

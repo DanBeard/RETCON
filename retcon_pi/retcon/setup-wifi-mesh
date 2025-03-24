@@ -1,0 +1,19 @@
+export RETCON_USER=$IGconf_device_user1
+
+# modifying network manager rules so retcon user can control without wifi over dbus without sudo
+mkdir -p /etc/polkit-1/localauthority/50-local.d
+chown root /etc/polkit-1/localauthority/50-local.d
+
+echo "[Allow installed user to control networking]
+Identity=unix-user:$RETCON_USER
+Action=org.freedesktop.NetworkManager.*
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes" > /etc/polkit-1/localauthority/50-local.d/10-network-manager.pkla
+
+# create the virtual ap interface udev rule 
+sudo rm /etc/udev/rules.d/90-wireless.rules || true 
+echo 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan0", \
+    RUN+="/sbin/iw dev %k interface add uap0 type __ap"
+' > /etc/udev/rules.d/90-wireless.rules
+

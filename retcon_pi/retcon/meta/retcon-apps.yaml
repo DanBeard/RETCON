@@ -1,0 +1,33 @@
+---
+name: example-essential
+mmdebstrap:
+#  setup-hooks:
+    # Could perform chroot ops here prior to pkg download/extract
+#  essential-hooks:
+    # Could perform chroot ops here prior to installing non-essential pkgs
+  customize-hooks:
+     # copy retcon apps to the home directory and build them
+  - |-
+    mkdir $1/home/$IGconf_device_user1/retcon
+    cp -r $IGconf_ext_nsdir/../../* $1/home/$IGconf_device_user1/retcon
+  - |-
+    chroot $1 bash -- <<- EOCHROOT
+    cd /home/$IGconf_device_user1/retcon
+    echo "Need to set some env vars so it installs as the pi user and not the host user"
+    export HOME=/home/$IGconf_device_user1
+    export NVM_DIR=/home/$IGconf_device_user1/.nvm
+    export USER=$IGconf_device_user1
+
+    mkdir -p /home/$IGconf_device_user1/.nvm
+
+    source ./install_retcon_locally.sh -y
+    
+    chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1
+    EOCHROOT
+  
+#  cleanup-hooks:
+    # Could perform chroot ops here when cleaning up
+  packages:
+    - dbus 
+    - libdbus-glib-1-dev 
+    - libdbus-1-dev

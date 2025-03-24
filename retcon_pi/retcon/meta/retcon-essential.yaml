@@ -1,0 +1,25 @@
+---
+name: example-essential
+mmdebstrap:
+#  setup-hooks:
+    # Could perform chroot ops here prior to pkg download/extract
+#  essential-hooks:
+    # Could perform chroot ops here prior to installing non-essential pkgs
+#  customize-hooks:
+    # Could perform ops here after the chroot is set up and packages installed, e.g.
+    #   mkdir -p $1/usr/local/assets
+    #   $IGconf_ext_dir/template-gen $IGconf_device_locale1 $IGconf_device_hostname > $1/usr/local/assets/my.template
+#  cleanup-hooks:
+    # Could perform chroot ops here when cleaning up
+  packages:
+    - apt-utils
+    - build-essential
+    - network-manager
+    - python3
+    - python3-venv
+    - python3-pip
+    - curl 
+    - git 
+    - rpi-update
+    - cron
+

@@ -33,14 +33,6 @@ wifi_channel_to_freq = {
 
 wifi_freq_to_channel = {f:c for c,f in wifi_channel_to_freq.items()}
 
-#tasks to run if we're in ui mode
-# these wont be run if we're in transport mode
-async def run_ui_tasks():
-    await asyncio.sleep(5) # sleep for 5 seconds to allow server to settle
-    print("Starting meshchat")
-    meshchat = MeshchatHandle()
-    meshchat.start_meshchat()
-    await asyncio.sleep(1)
 
 # This script will be our entry point for RETCON
 if __name__ == "__main__":
@@ -53,22 +45,34 @@ if __name__ == "__main__":
     profile = sys.argv[1] if len(sys.argv) > 1 else None
     #Load our retcon profile config file    
     config = get_recton_config(profile)
-    # startup the ap, this is the same  whether we're a transport or client
-    # TODO: We should really use dbus directly for this, but nmcli is so much easier
-    psk = config["retcon"].get("client_ap_psk", "password")
-    # are we just a transport? or should we launch uis?
-    is_transport = config["retcon"].get("mode", "ui") == "transport"
+    r_config = config["retcon"]
     
-    wifi_config = config["retcon"]["wifi"]
-    if config["retcon"]["mode"] == "transport": 
-        psk = wifi_config['psk']
+    # startup the ap, this is the same  whether we're a transport or client
+
+    # are we just a transport? or should we launch uis?
+    is_transport = r_config.get("mode", "client") == "transport"
+    is_client = r_config.get("mode", "client") == "client"
+    
+    wifi_config = r_config["wifi"]
+    
+    if "prefix" not in wifi_config or "psk" not in wifi_config or "freq" not in wifi_config:
+        print("ERROR!  'prefix', 'psk', and freq are required in [[wifi]] section of config")
+        exit()
         
     client_iface = wifi_config["client_iface"]
     ap_iface = wifi_config["ap_iface"]
-    node_id = uuid.getnode()
-    ssid = wifi_config["prefix"] + a85encode(node_id.to_bytes(6, signed=False)).decode()
+    node_id = uuid.getnode() 
+    
+    if is_client:
+        ssid = wifi_config.get("client_ap_prefix", wifi_config["prefix"]) + a85encode(node_id.to_bytes(6, signed=False)).decode()
+        psk = wifi_config.get("client_ap_psk", wifi_config["psk"])
+    else:
+        ssid = wifi_config["prefix"] + a85encode(node_id.to_bytes(6, signed=False)).decode()
+        psk = wifi_config['psk']
+        
     channel = wifi_freq_to_channel[int(wifi_config["freq"])]
     
+    # TODO: We should really use dbus directly for this, but nmcli is so much easier
     # Setup wifi interfaces
     commands = [
         "nmcli connection delete preconfigured", # bring down and connection that user preconfiged to setup retcon
@@ -142,7 +146,14 @@ if __name__ == "__main__":
         await asyncio.gather(*plugin_tasks)
 
    
-    ui_tasks = []
+    #tasks to run if we're in ui mode
+    # these wont be run if we're in transport mode
+    async def run_ui_tasks():
+        await asyncio.sleep(5) # sleep for 5 seconds to allow server to settle
+        print("Starting meshchat")
+        MeshchatHandle.start_meshchat(ap_iface)
+        await asyncio.sleep(1)
+    
     async def run():
         # busy loop so we don't exit
         async def busy_loop():
@@ -154,7 +165,7 @@ if __name__ == "__main__":
                 await asyncio.sleep(60)
                 
         tasks = [busy_loop(), run_admin_interfaces()]
-        if not is_transport:
+        if is_client:
             tasks.append(run_ui_tasks())
             
         await asyncio.gather(*tasks)

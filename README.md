@@ -110,12 +110,13 @@ Contributions are welcome and appreciated!
 ### Planned Features
 
 - [x] LXMF based configuration interface
-- [ ] Client mode where wifi AP password is different meshchat is launched automatically
+- [x] Client mode where wifi AP password is different meshchat is launched automatically
+- [ ] Captive portal in client mode to instruct users how to connect to meshchat and change wifi ap details
+- [ ] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
 - [ ] Ability to change from client to transport mode via admin interfaces
 - [ ] Ability to change from client mode details from admin interface (like AP password)
-- [ ] Captive portal in client mode to instruct users how to connect to meshchat and change wifi ap details
 - [ ] Configure rpi-image-gen from retcon config (for things like ssh, username and extra apt packages)
-- [ ] Nomadnet configuration interface for field adjustments
+- [ ] Nomadnet/micron configuration interface for field adjustments
 - [ ] 'microRetcon' for hardware platforms (ESP32, etc.)
 - [ ] Integration with more transports (Bluetooth mesh, additional radio modules)
 

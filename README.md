@@ -59,7 +59,7 @@ Copy a default profile to 'active' and modify to meet your needs
 Note: 'active' is gitignored. Other configs can be stored here and checked into git for easy copying e.g. dc33.config but be mindful of checking in config with passwords you'd rather not share publically. 
 
 
-#### 4. Run the ras[o-image-gen build]
+#### 4. Run the raspi image builder
 `./build_retcon.sh`
 
 Grab your favorite drink and relax because it will take a while. The last line printed will include the file location of the image. 
@@ -123,7 +123,7 @@ Contributions are welcome and appreciated!
 ### Debugging, Dev and security Tips
 
 To build an image with SSH turned on change `device_ssh_user1=n` to `device_ssh_user1=y` in `retcon_pi/retcon.options`
-default username is `retcon` and password is `retcon`. If the node is somewhere people have easy phsyical access to it (or if SSH server is turned on) then this absolutely needs to eb changed! 
+default username is `retcon` and password is `retcon`. If the node is somewhere people have easy phsyical access to it (or if SSH server is turned on) then this absolutely needs to be changed! 
 
 ### Troubleshooting
 

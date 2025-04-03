@@ -23,6 +23,12 @@ mmdebstrap:
     source ./install_retcon_locally.sh -y
     
     chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1
+
+    echo setting up authbind so this user can bind to port 80
+    touch /etc/authbind/byport/80
+    chmod 700 /etc/authbind/byport/80
+    chown ${IGconf_device_user1}:${IGconf_device_user1} /etc/authbind/byport/80
+
     EOCHROOT
   
 #  cleanup-hooks:
@@ -31,3 +37,5 @@ mmdebstrap:
     - dbus 
     - libdbus-glib-1-dev 
     - libdbus-1-dev
+    - libmicrohttpd-dev
+    - authbind

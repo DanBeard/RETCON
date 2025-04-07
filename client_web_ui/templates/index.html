@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>98.css example</title>
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/98.css') }}" />
+  </head>
+
+  <body style="background-color:#008080">
+    <div class="window" style="margin: 32px; width: 800px">
+      <div class="title-bar">
+        <div class="title-bar-text">
+          RETCON!1!!One!1!
+        </div>
+
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:600px; margin-left:auto; margin-right:auto; display:block;" />
+        <p> Please note that any user with access to the client wifi will have access to this page and can make changes to your node. PLEASE change the password ASAP!</p>
+        <section class="field-row" style="justify-content: flex-end">
+          <button>OK</button>
+          <button>Cancel</button>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

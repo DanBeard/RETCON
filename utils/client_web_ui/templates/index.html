@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RETCON</title>
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/98.css') }}" />
+    <style type="text/css">
+        .large {
+          font-size: 15px;
+        }
+        .xlarge {
+          font-size:18px;
+        }
+        .tab-content {
+          display: none;
+        }
+        .tab-content.active {
+          display: block;
+        }
+        li[role="tab"] a {
+          font-size: 20px;
+        }
+    </style>
+  </head>
+
+  <body style="background-color:#008080">
+    <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
+      <div class="title-bar">
+        <div class="title-bar-text">
+          RETCON!1!!One!1!
+        </div>
+
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:500px; margin-left:auto; margin-right:auto; display:block;" />
+        <p class="xlarge"> Please note that any user with access to the client wifi will have access to this page and can make changes to your node!</p>
+
+
+      <menu role="tablist">
+        <li role="tab" id="tab-apps" ><a href="#apps" onclick="changeTab('apps')">Applications</a></li>
+        <li role="tab" id="tab-wifi" ><a href="#wifi" onclick="changeTab('wifi')" >Wifi Setup</a></li>
+        <li role="tab" id="tab-advanced"><a href="#advanced" onclick="changeTab('advanced')">Advanced</a></li>
+        <li role="tab" id="tab-credits"><a href="#credits" onclick="changeTab('credits')">Credits</a></li>
+      </menu>
+
+      <div class="window tab-content"  role="tabpanel" id="content-apps" >
+        <div class="window-body">
+          <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a>
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel" id="content-wifi">
+        <div class="window-body">
+          WIFI
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel" id="content-advanced">
+        <div class="window-body">
+          ADVANCED
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel"  id="content-credits">
+        <div class="window-body">
+         CREDITS
+        </div>
+      </div>
+
+      
+      </div>
+    </div>
+
+    <script>
+      let activeTab = "";
+
+      function changeTab(tabName) {
+        activeTab = tabName;
+        const contents = document.querySelectorAll(".tab-content");
+        for(let c of contents) {
+          if(c.id=='content-'+tabName) c.classList.add("active");
+          else c.classList.remove("active")
+        }
+
+        const tabs = document.querySelectorAll("li[role='tab']");
+        for(let t of tabs){
+          if(t.id == "tab-"+tabName) t.setAttribute("aria-selected","true");
+          else t.removeAttribute("aria-selected");
+        }
+      }
+
+      const defaultTab = "apps"
+      changeTab(defaultTab);
+
+    </script>
+  </body>
+</html>

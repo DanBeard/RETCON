@@ -35,6 +35,10 @@ class RetconAdmin:
         with open(profile_path, 'w') as fout:
             self.config.write(profile_path)
        
+    def reboot(self):
+        # trigger the shutdown
+        subprocess.Popen(f"sleep 3; sudo reboot",shell=True)
+    
     @property
     def announce_every(self):
         return float(self.config['retcon'].get("announce_every", 10*60)) #announce every 10 mins

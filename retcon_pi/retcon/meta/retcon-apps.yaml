@@ -29,6 +29,9 @@ mmdebstrap:
     chmod 700 /etc/authbind/byport/80
     chown ${IGconf_device_user1}:${IGconf_device_user1} /etc/authbind/byport/80
 
+    echo writing special sudo rule for reboot so we can reboot at will from admin scripts
+    echo ${IGconf_device_user1} ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff > /etc/sudoers.d/011-retcon-reboot
+    
     EOCHROOT
   
 #  cleanup-hooks:

@@ -151,7 +151,7 @@ if __name__ == "__main__":
     async def run_ui_tasks():
         await asyncio.sleep(5) # sleep for 5 seconds to allow server to settle
         print("Starting meshchat")
-        MeshchatHandle.start_meshchat(ap_iface)
+        MeshchatHandle.start_meshchat(ap_iface, ssid)
         await asyncio.sleep(1)
     
     async def run():

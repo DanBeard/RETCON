@@ -8,7 +8,7 @@ class MeshchatHandle():
     _homepage_singleton = None
 
     @classmethod
-    def start_meshchat(cls, iface):
+    def start_meshchat(cls, iface, ssid):
         ip = ni.ifaddresses(iface)[ni.AF_INET][0]['addr']
         print(f"Starting Meshchat on {ip}")
         current_env = os.environ.copy()
@@ -20,5 +20,5 @@ class MeshchatHandle():
         print("starting retcon client homepage")
         # Also launch the retcon homepage!
         cls._homepage_singleton = subprocess.Popen(
-            f"authbind --deep python {dir_path}/../client_web_ui/retcon_client_ui.py", 
+            f"authbind --deep python {dir_path}/../client_web_ui/retcon_client_ui.py {ssid}", 
             shell=True, env=current_env)

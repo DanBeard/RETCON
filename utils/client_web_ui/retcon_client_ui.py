@@ -1,5 +1,6 @@
 import netifaces as ni
-from flask import Flask, render_template
+import json 
+from flask import Flask, render_template, request, jsonify
 import os
 import sys
 import subprocess
@@ -16,12 +17,34 @@ admin = RetconAdmin("UNKNOWN")
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html", admin=admin)
 
-@app.route('/reboot')
-def reboot():
-    admin.reboot()
-    return render_template("index.html")
+@app.route('/wifi', methods=['POST'])
+def wifi():
+    try:
+        post = json.loads(request.data)
+        client_ap_psk = post["client_ap_psk"]
+        admin.client_ap_psk = client_ap_psk
+        
+        return jsonify({ "message" : "Config Saved. Changes only take effect after a reboot.", "status": "ok"})
+    except Exception as e:
+        return jsonify({ "message" : str(e), "status": "error"})
+
+@app.route('/advanced', methods=['POST'])
+def advanced():
+    try:
+        post = json.loads(request.data)
+        config_file = post["config_file"]
+        admin.config_str = config_file
+        
+        return jsonify({ "message" : "Config Saved. Changes only take effect after a reboot.", "status": "ok"})
+    except Exception as e:
+        return jsonify({ "message" : str(e), "status": "error"})
+    
+# @app.route('/reboot')
+# def reboot():
+#     admin.reboot()
+#     return render_template("index.html")
 
 # main driver function
 if __name__ == '__main__':

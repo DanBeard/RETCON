@@ -11,7 +11,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__)) + "/.."
 def get_recton_config(retcon_profile: Optional[str] = None):
     profile_path = (retcon_profile + ".config") if retcon_profile is not None else "active"
     profile_path = dir_path + "/retcon_profiles/" + profile_path
-    return ConfigObj(profile_path)
+    return ConfigObj(profile_path, interpolation=False)
 
 def generate_rns_config(plugins: dict, retcon_profile: Optional[str] = None):
     """Generate an RNS config file based on the retcon config"""   

@@ -38,7 +38,8 @@
         </div>
       </div>
       <div class="window-body">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:500px; margin-left:auto; margin-right:auto; display:block;" />
+        <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:450px; margin-left:auto; margin-right:auto; display:block;" />
+        <center><h3>{{admin.profile_name}}</h3></center>
         <p class="xlarge"> Please note that any user with access to the client wifi will have access to this page and can make changes to your node!</p>
 
 
@@ -51,19 +52,33 @@
 
       <div class="window tab-content"  role="tabpanel" id="content-apps" >
         <div class="window-body">
+          <h3> Applications: </h3>
           <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a>
         </div>
       </div>
 
       <div class="window tab-content" role="tabpanel" id="content-wifi">
         <div class="window-body">
-          WIFI
+          <h3>Wifi Setup  </h3>
+          <div class="field-row">
+            <label class="large" for="wifi_ssid">Wifi SSID</label>
+            <input id="wifi_ssid" type="text" value="{{admin.name}}" disabled />
+          </div>
+          <div class="field-row">
+            <label class="large" for="client_ap_psk">Wifi Pass</label>
+            <input id="client_ap_psk" type="text" value="{{admin.client_ap_psk}}" />
+          </div>
+          <button class="default" onclick="save_wifi()">Save</button>
         </div>
       </div>
 
       <div class="window tab-content" role="tabpanel" id="content-advanced">
         <div class="window-body">
-          ADVANCED
+          <div class="field-row-stacked" style="width: 760px">
+            <label for="config_file">Config File</label>
+            <textarea id="config_file" rows="25">{{admin.config_str}}</textarea>
+            <button class="default" onclick="save_advanced()">Save</button>
+          </div>
         </div>
       </div>
 
@@ -81,22 +96,53 @@
       let activeTab = "";
 
       function changeTab(tabName) {
-        activeTab = tabName;
+        activeTab = tabName.replace('#','');
         const contents = document.querySelectorAll(".tab-content");
         for(let c of contents) {
-          if(c.id=='content-'+tabName) c.classList.add("active");
+          if(c.id=='content-'+activeTab) c.classList.add("active");
           else c.classList.remove("active")
         }
 
         const tabs = document.querySelectorAll("li[role='tab']");
         for(let t of tabs){
-          if(t.id == "tab-"+tabName) t.setAttribute("aria-selected","true");
+          if(t.id == "tab-"+activeTab) t.setAttribute("aria-selected","true");
           else t.removeAttribute("aria-selected");
         }
       }
 
-      const defaultTab = "apps"
+      const defaultTab = window.location.hash || "apps"
       changeTab(defaultTab);
+
+      // tab functions
+      function save_wifi() {
+        //just PSK for now
+        data = {
+          client_ap_psk: document.getElementById('client_ap_psk').value || "not set"
+        }
+
+        fetch("/wifi", {method: "POST", body: JSON.stringify(data) })
+        .then((resp)=> resp.json()
+            .then((msg)=> {
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            })
+            )
+      };
+
+      function save_advanced() {
+        //just PSK for now
+        data = {
+          config_file: document.getElementById('config_file').value || "not set"
+        }
+
+        fetch("/advanced", {method: "POST", body: JSON.stringify(data) })
+        .then((resp)=> resp.json()
+            .then((msg)=> {
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            })
+            )
+      };
 
     </script>
   </body>

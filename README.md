@@ -111,7 +111,8 @@ Contributions are welcome and appreciated!
 
 - [x] LXMF based configuration interface
 - [x] Client mode where wifi AP password is different meshchat is launched automatically
-- [ ] Captive portal in client mode to instruct users how to connect to meshchat and change wifi ap details
+- [x] Web based app in client mode to instruct users how to connect to meshchat and change wifi ap details
+- [ ] Captive portal in client mode directing to web app
 - [ ] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
 - [ ] Ability to change from client to transport mode via admin interfaces
 - [ ] Ability to change from client mode details from admin interface (like AP password)

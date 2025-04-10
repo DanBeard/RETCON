@@ -83,6 +83,13 @@ fi
 cd ../
 # end meshchat
 
+# nodogsplash for captive portal
+sudo apt-get install libmicrohttpd-dev
+git clone https://github.com/nodogsplash/nodogsplash.git
+cd nodogsplash
+make
+sudo make install
+
 # download custom interfaces into ./apps/interfaces
 mkdir interfaces
 # Install RNS_Over_meshtastic and soft link it to interfaces folder

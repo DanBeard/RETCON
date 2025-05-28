@@ -114,8 +114,8 @@ Contributions are welcome and appreciated!
 - [x] Web based app in client mode to instruct users how to connect to meshchat and change wifi ap details
 - [ ] Captive portal in client mode directing to web app
 - [ ] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
-- [ ] Ability to change from client to transport mode via admin interfaces
-- [ ] Ability to change from client mode details from admin interface (like AP password)
+- [x] Ability to change from client to transport mode via admin interfaces
+- [x] Ability to change from client mode details from admin interface (like AP password)
 - [ ] Configure rpi-image-gen from retcon config (for things like ssh, username and extra apt packages)
 - [ ] Nomadnet/micron configuration interface for field adjustments
 - [ ] 'microRetcon' for hardware platforms (ESP32, etc.)

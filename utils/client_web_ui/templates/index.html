@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RETCON</title>
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/98.css') }}" />
+    <style type="text/css">
+        .large {
+          font-size: 15px;
+        }
+        .xlarge {
+          font-size:18px;
+        }
+        .tab-content {
+          display: none;
+        }
+        .tab-content.active {
+          display: block;
+        }
+        li[role="tab"] a {
+          font-size: 20px;
+        }
+    </style>
+  </head>
+
+  <body style="background-color:#008080">
+    <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
+      <div class="title-bar">
+        <div class="title-bar-text">
+          RETCON!1!!One!1!
+        </div>
+
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:450px; margin-left:auto; margin-right:auto; display:block;" />
+        <center><h3>{{admin.profile_name}}</h3></center>
+        <p class="xlarge"> Please note that any user with access to the client wifi will have access to this page and can make changes to your node!</p>
+
+
+      <menu role="tablist">
+        <li role="tab" id="tab-apps" ><a href="#apps" onclick="changeTab('apps')">Applications</a></li>
+        <li role="tab" id="tab-wifi" ><a href="#wifi" onclick="changeTab('wifi')" >Wifi Setup</a></li>
+        <li role="tab" id="tab-advanced"><a href="#advanced" onclick="changeTab('advanced')">Advanced</a></li>
+        <li role="tab" id="tab-credits"><a href="#credits" onclick="changeTab('credits')">Credits</a></li>
+      </menu>
+
+      <div class="window tab-content"  role="tabpanel" id="content-apps" >
+        <div class="window-body">
+          <h3> Applications: </h3>
+          <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a>
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel" id="content-wifi">
+        <div class="window-body">
+          <h3>Wifi Setup  </h3>
+          <div class="field-row">
+            <label class="large" for="wifi_ssid">Wifi SSID</label>
+            <input id="wifi_ssid" type="text" value="{{admin.name}}" disabled />
+          </div>
+          <div class="field-row">
+            <label class="large" for="client_ap_psk">Wifi Pass</label>
+            <input id="client_ap_psk" type="text" value="{{admin.client_ap_psk}}" />
+          </div>
+          <button class="default" onclick="save_wifi()">Save</button>
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel" id="content-advanced">
+        <div class="window-body">
+          <div class="field-row-stacked" style="width: 760px">
+            <label for="config_file">Config File</label>
+            <textarea id="config_file" rows="25">{{admin.config_str}}</textarea>
+            <button class="default" onclick="save_advanced()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel"  id="content-credits">
+        <div class="window-body">
+        
+         <p class="large">
+          <br/> RETCON created By Varx (<a href='http://retcon.network'>http://retcon.network</a>)  
+          <br/> Reticulum created by Mark Qvist (<a href='https://reticulum.network/credits.html'>https://reticulum.network/credits.html</a>) 
+          <br/> Retiulum Meshchat created by Liam Cottle (<a href='https://github.com/liamcottle/reticulum-meshchat'>https://github.com/liamcottle/reticulum-meshchat</a>)
+          <br/> RNS_Over_Meshtastic created by landandair(<a href='https://github.com/landandair/RNS_Over_Meshtastic.git'>https://github.com/landandair/RNS_Over_Meshtastic.git</a>)
+          <br/> rpi-image-gen created by Raspberry Pi (<a href='https://github.com/raspberrypi/rpi-image-gen'>https://github.com/raspberrypi/rpi-image-gen</a>)
+        </p>
+        </div>
+      </div>
+
+      
+      </div>
+    </div>
+
+    <script>
+      let activeTab = "";
+
+      function changeTab(tabName) {
+        activeTab = tabName.replace('#','');
+        const contents = document.querySelectorAll(".tab-content");
+        for(let c of contents) {
+          if(c.id=='content-'+activeTab) c.classList.add("active");
+          else c.classList.remove("active")
+        }
+
+        const tabs = document.querySelectorAll("li[role='tab']");
+        for(let t of tabs){
+          if(t.id == "tab-"+activeTab) t.setAttribute("aria-selected","true");
+          else t.removeAttribute("aria-selected");
+        }
+      }
+
+      const defaultTab = window.location.hash || "apps"
+      changeTab(defaultTab);
+
+      // tab functions
+      function save_wifi() {
+        //just PSK for now
+        data = {
+          client_ap_psk: document.getElementById('client_ap_psk').value || "not set"
+        }
+
+        fetch("/wifi", {method: "POST", body: JSON.stringify(data) })
+        .then((resp)=> resp.json()
+            .then((msg)=> {
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            })
+            )
+      };
+
+      function save_advanced() {
+        //just PSK for now
+        data = {
+          config_file: document.getElementById('config_file').value || "not set"
+        }
+
+        fetch("/advanced", {method: "POST", body: JSON.stringify(data) })
+        .then((resp)=> resp.json()
+            .then((msg)=> {
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            })
+            )
+      };
+
+    </script>
+  </body>
+</html>

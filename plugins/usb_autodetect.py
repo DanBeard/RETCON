@@ -54,12 +54,15 @@ class UsbAutodetectPlugin(RetconPlugin):
             # try to connect o each likely port and see if we get meshtastic data back
             for port in ports:
                 if meshtastic_port is None: 
-                    print(f"Trying to connect meshtastic to {port}")
-                    conn = meshtastic.serial_interface.SerialInterface(port)
-                    time.sleep(1)
-                    if conn.getMyNodeInfo() is not None:
-                        meshtastic_port = port
-                    conn.close()
+                    try:
+                        print(f"Trying to connect meshtastic to {port}")
+                        conn = meshtastic.serial_interface.SerialInterface(port)
+                        time.sleep(1)
+                        if conn.getMyNodeInfo() is not None:
+                            meshtastic_port = port
+                        conn.close()
+                    except Exception as e:
+                        print(f"Couldn't connect to {port}. Got exception {e}")
                 
                 
             if meshtastic_port is None:

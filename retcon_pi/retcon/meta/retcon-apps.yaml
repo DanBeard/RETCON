@@ -23,6 +23,16 @@ mmdebstrap:
     source ./install_retcon_locally.sh -y
     
     chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1
+
+    echo setting up authbind so this user can bind to port 80
+    touch /etc/authbind/byport/80
+    chmod 700 /etc/authbind/byport/80
+    chown ${IGconf_device_user1}:${IGconf_device_user1} /etc/authbind/byport/80
+
+    echo writing special sudo rule for reboot so we can reboot at will from admin scripts
+    echo ${IGconf_device_user1} ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff > /etc/sudoers.d/011-retcon-reboot
+    echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/nodogsplash > /etc/sudoers.d/011-retcon-nodogsplash
+    
     EOCHROOT
   
 #  cleanup-hooks:
@@ -31,3 +41,6 @@ mmdebstrap:
     - dbus 
     - libdbus-glib-1-dev 
     - libdbus-1-dev
+    - libmicrohttpd-dev
+    - authbind
+    - fdisk

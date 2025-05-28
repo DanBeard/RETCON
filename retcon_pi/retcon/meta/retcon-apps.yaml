@@ -43,3 +43,4 @@ mmdebstrap:
     - libdbus-1-dev
     - libmicrohttpd-dev
     - authbind
+    - fdisk

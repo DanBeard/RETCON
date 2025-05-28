@@ -48,6 +48,6 @@ def generate_rns_config(plugins: dict, retcon_profile: Optional[str] = None):
         
     return template.render(enable_transport=enable_transport, 
                            plugin_interfaces=plugin_interfaces, 
-                           hardcoded_interfaces="" if hardcoded_interfaces is not None else hardcoded_interfaces
+                           hardcoded_interfaces="" if hardcoded_interfaces is None else hardcoded_interfaces
                            )
 

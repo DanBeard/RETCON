@@ -20,7 +20,7 @@ cd $SCRIPTPATH
 if [ "$1" != "-y" ]; then
 echo ""
 echo "WARNING:"
-echo "This will install retcon LOCALLY. (E.g. on the current device). If you're trying to build a pi image, this probably isn't what you want"
+echo "This will install retcon LOCALLY. (i.e. on the current device). If you're trying to build a pi image, this probably isn't what you want"
 echo "To cross compile a pi image, run ./build_retcon.sh"
 echo ""
 prompt_confirm "continue?" || exit 0
@@ -89,7 +89,8 @@ git clone https://github.com/nodogsplash/nodogsplash.git
 cd nodogsplash
 make
 sudo make install
-
+cd ../
+#end nodogsplash
 # download custom interfaces into ./apps/interfaces
 mkdir interfaces
 # Install RNS_Over_meshtastic and soft link it to interfaces folder

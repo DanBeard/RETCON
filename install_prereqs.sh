@@ -39,7 +39,8 @@ sudo apt autoremove -y
 
 # deps copied from rpi-image-gen
 sudo apt install coreutils zip dosfstools e2fsprogs grep rsync curl genimage mtools mmdebstrap bdebstrap podman crudini zstd pv uidmap python-is-python3 dbus-user-session btrfs-progs dctrl-tools uuid-runtime
-
+# unofficial rpi-image-gen deps
+sudo apt install qemu-user-static binfmt-support
 # copy default config to active
 export ACTIVE_CONFIG=$SCRIPTPATH/retcon_profiles/active
 if [ -f $ACTIVE_CONFIG ]; then

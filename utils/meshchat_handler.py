@@ -20,5 +20,5 @@ class MeshchatHandle():
         print("starting retcon client homepage")
         # Also launch the retcon homepage!
         cls._homepage_singleton = subprocess.Popen(
-            f"authbind --deep python {dir_path}/../client_web_ui/retcon_client_ui.py {ssid}", 
+            f"authbind --deep python {dir_path}/client_web_ui/retcon_client_ui.py {ssid}", 
             shell=True, env=current_env)

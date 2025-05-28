@@ -4,11 +4,12 @@ RETCON administration utility
 import os
 import asyncio
 import RNS
-import base64
+from io import StringIO, BytesIO
 import time
 from LXMF import LXMessage, LXMRouter
 import subprocess
 from rns_config_gen import get_recton_config
+from configobj import ConfigObj
 import sdbus
 from sdbus_block.networkmanager import (
     NetworkManager,
@@ -28,13 +29,20 @@ class RetconAdmin:
         self.config = get_recton_config(None) # always the active profile
         self.name = name
         
-        
     # write the config to the active profile
     def write_config(self):
         profile_path = dir_path + "/retcon_profiles/active"
-        with open(profile_path, 'w') as fout:
-            self.config.write(profile_path)
+        with open(profile_path, 'wb') as fout:
+            self.config.write(fout)
        
+    def reboot(self):
+        # trigger the shutdown
+        subprocess.Popen(f"sleep 3; sudo reboot",shell=True)
+    
+    @property
+    def profile_name(self):
+        return self.config['retcon'].get("name", "no name")
+    
     @property
     def announce_every(self):
         return float(self.config['retcon'].get("announce_every", 10*60)) #announce every 10 mins
@@ -49,14 +57,47 @@ class RetconAdmin:
     
     @property
     def password(self):
+        """A Passowrd to authenticate a user as an admin over an admin interface like LXMF or html"""
         return self.config['retcon'].get("password", None)
+    
+    @property
+    def client_ap_psk(self):
+        print(self.config["retcon"]['wifi'])
+        return self.config["retcon"]['wifi'].get('client_ap_psk',"")
+    
+    @client_ap_psk.setter
+    def client_ap_psk(self, psk):
+        self.config["retcon"]['wifi']['client_ap_psk'] = psk
+        self.config["retcon"]['client_info_changed'] = True
+        self.write_config()
+        
+    @property
+    def client_info_changed(self):
+        """
+        Flag that indicates the client config has been changed by a user.
+        Useful to know if we need to show Wizards or tips during setup
+        """
+        self.config["retcon"].get('client_info_changed', False)
     
     @property
     def is_transport(self):
         return self.config['retcon'].get("mode", "ui") == "transport"
     
+    @property
+    def config_str(self):
+        with BytesIO() as result:
+            self.config.write(outfile=result)
+            return result.getvalue().decode()
+        
+    @config_str.setter
+    def config_str(self, value:str):
+        with BytesIO(initial_bytes=value.encode()) as fin:
+            new_config = ConfigObj(fin, interpolation=False)
+            self.config = new_config
+            self.write_config()
+        
     def is_admin(self, user_id, password):
-        return user_id in self.admins or (self.passowrd is not None and password == self.password)
+        return user_id in self.admins or (self.password is not None and password == self.password)
     
     @property
     def connected_ap(self):

@@ -34,12 +34,13 @@ echo Installing python....
 sudo apt update
 sudo apt upgrade -y
 sudo apt install git -y
-sudo apt install python3-pip python3-venv curl git dbus libdbus-glib-1-dev libdbus-1-dev -y
+sudo apt install python3-pip python3-venv curl git dbus libdbus-glib-1-dev libdbus-1-dev jq -y
 sudo apt autoremove -y
 
 # deps copied from rpi-image-gen
 sudo apt install coreutils zip dosfstools e2fsprogs grep rsync curl genimage mtools mmdebstrap bdebstrap podman crudini zstd pv uidmap python-is-python3 dbus-user-session btrfs-progs dctrl-tools uuid-runtime
-
+# unofficial rpi-image-gen deps
+sudo apt install qemu-user-static binfmt-support
 # copy default config to active
 export ACTIVE_CONFIG=$SCRIPTPATH/retcon_profiles/active
 if [ -f $ACTIVE_CONFIG ]; then

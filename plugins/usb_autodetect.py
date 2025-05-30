@@ -8,7 +8,7 @@ meshtastic_config_template = """
   [[Meshtastic Interface]]
     type = Meshtastic_Interface
     enabled = true
-    mode = ap
+    #mode = roaming
     port = {{port}}  # Optional: Meshtastic serial device port
     #ble_port = short_1234  # Optional: Meshtastic BLE device ID (Replacement for serial port)
     #tcp_port = 10.0.0.246  #Optional: Meshtastic TCP IP. [port is optional if using default port] (Replacement for serial or ble)
@@ -21,7 +21,7 @@ rnode_config_template = """
   [[RnodeUSB]]
     type = RNodeInterface
     interface_enabled = true
-    mode = ap
+    #mode = roaming
     port = {{port}}
     frequency = {{frequency}}
     bandwidth = {{bandwidth}}

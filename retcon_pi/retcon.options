@@ -7,7 +7,7 @@ device_user1=retcon
 device_user1pass=retcon
 
 
-device_ssh_user1=n
+device_ssh_user1=y
 
 # Default locale
 locale1="en_US.UTF-8"

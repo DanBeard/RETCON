@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, jsonify
 import os
 import sys
 import subprocess
+import time
 
 from flask_file_explorer.file_explorer import file_explorer_bp  # The blueprint code
 from flask_file_explorer.filters import register_filters        # Filters used in the viewer
@@ -49,11 +50,21 @@ def advanced():
     except Exception as e:
         return jsonify({ "message" : str(e), "status": "error"})
     
-# @app.route('/reboot')
-# def reboot():
-#     admin.reboot()
-#     return render_template("index.html")
-
+@app.route('/reboot', methods=['POST'])
+def reboot():
+    post = json.loads(request.data)
+    if post["reboot"] == "reboot":
+        admin.reboot()
+        return jsonify({ "message" : "rebooting", "status": "ok"})
+    else:
+        return jsonify({ "message" : "must POST with reboot='reboot'", "status": "error"})
+    
+@app.route('/toggle_ssh', methods=['POST'])
+def toggle_ssh():
+    admin.toggle_ssh()
+    time.sleep(2)
+    return jsonify({ "message" : f"SSH Enabled = {admin.ssh_enabled}", "status": "ok"})
+   
 # main driver function
 if __name__ == '__main__':
     

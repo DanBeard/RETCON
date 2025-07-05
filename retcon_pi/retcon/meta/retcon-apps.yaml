@@ -32,7 +32,9 @@ mmdebstrap:
     echo writing special sudo rule for reboot so we can reboot at will from admin scripts
     echo ${IGconf_device_user1} ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff > /etc/sudoers.d/011-retcon-reboot
     echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/nodogsplash > /etc/sudoers.d/011-retcon-nodogsplash
-    
+    echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/systemctl > /etc/sudoers.d/011-retcon-systemctl
+
+
     # dnsmasq config
     cat > /etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf <<EOCFGL
     address=/con/10.42.0.1

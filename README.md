@@ -1,4 +1,4 @@
-# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.2
+# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.3
 
 Because complex networks shouldn't require complex setup.
 
@@ -8,7 +8,7 @@ RETCON is a streamlined, deployment-focused solution for Reticulum mesh networki
 
 RETCON enables quick creation of pre-configured Raspberry Pi images that automatically form resilient mesh networks once deployed. It is designed for scenarios where rapid consistent deployment matters more than configuration flexibility - e.g. conferences, maker camps, community events, emergency response situations, and other environments where you need reliable communication infrastructure quickly.
 
-Note: This is currently pre-alpha dev release. Use at your own risk and please give feedback on improvements or potenial PRs!
+Note: This is currently alpha dev release. Use at your own risk and please give feedback on improvements or potenial PRs!
 
 ### Key Features
 
@@ -71,7 +71,7 @@ Use `dd` or raspi imager in "custom image" mode to flash the .img file to an sd 
 #### 6. Boot and use
 For devices in client mode:
 1. Connect to the RETCON access point (ssid is defined in the config file)
-2. Open a web browser and navigate to `10.10.0.1`
+2. Open a web browser and navigate to `retcon.local` (or retcon.radio, or anything.retcon)
 3. The Reticulum Meshchat interface will be available for immediate communication
 
 ## Operation Modes
@@ -92,7 +92,7 @@ Client mode provides both mesh networking capabilities and end-user access:
 - Maintains mesh connectivity to other RETCON nodes
 - Automatically bridges communications across the entire network
 
-This mode is perfect for user-facing node where people need to access the mesh network.
+This mode is meant for user-facing nodes where people can access the mesh network.
 
 ## Administrating the Nodes
 Each node comes with a text based administration console that can be used over LXMF. Look for the identity with the same name as the wifi mesh SSID.
@@ -112,7 +112,7 @@ Contributions are welcome and appreciated!
 - [x] LXMF based configuration interface
 - [x] Client mode where wifi AP password is different meshchat is launched automatically
 - [x] Web based app in client mode to instruct users how to connect to meshchat and change wifi ap details
-- [ ] Captive portal in client mode directing to web app
+- [x] Captive portal in client mode directing to web app (retcon.local)
 - [ ] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
 - [x] Ability to change from client to transport mode via admin interfaces
 - [x] Ability to change from client mode details from admin interface (like AP password)
@@ -124,7 +124,7 @@ Contributions are welcome and appreciated!
 
 ### Debugging, Dev and security Tips
 
-To build an image with SSH turned on change `device_ssh_user1=n` to `device_ssh_user1=y` in `retcon_pi/retcon.options`
+SSH in enabled in the raspi build but disabled on first boot by RETCON. It can be temporarily turned on via the web interface. 
 default username is `retcon` and password is `retcon`. If the node is somewhere people have easy phsyical access to it (or if SSH server is turned on) then this absolutely needs to be changed! 
 
 ### Troubleshooting

@@ -28,7 +28,7 @@
     <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
       <div class="title-bar">
         <div class="title-bar-text">
-          RETCON!1!!One!1!  v0.0.2
+          RETCON!1!!One!1!  v0.0.3
         </div>
 
         <div class="title-bar-controls">
@@ -54,14 +54,21 @@
       <div class="window tab-content"  role="tabpanel" id="content-apps" >
         <div class="window-body">
           <h3> Applications: </h3>
-          <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a>
-          <a class="xlarge" target="_blank" href="/static/rnode-flasher/index.html">Rnode Web Flasher</a>
+          <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a> <--- Use this to chat and browse 
+          <br />
+          <br />
+          <a class="xlarge" target="_blank" href="/static/rnode-flasher/index.html">Rnode Web Flasher</a> <--- Use this to flash Rnodes (requires chrome :( )
         </div>
       </div>
 
       <div class="window tab-content" role="tabpanel" id="content-wifi">
         <div class="window-body">
-          <h3>Wifi Setup  </h3>
+          <h3>Client Wifi Setup  </h3>
+          
+            <h5> 
+              This setting controls the ssid and password for the Client hosted AP only (what you're connected to right now)
+            </h5>
+          
           <div class="field-row">
             <label class="large" for="wifi_ssid">Wifi SSID</label>
             <input id="wifi_ssid" type="text" value="{{admin.name}}" disabled />
@@ -86,6 +93,11 @@
             <label for="config_file">Config File</label>
             <textarea id="config_file" rows="25">{{admin.config_str}}</textarea>
             <button class="default" onclick="save_advanced()">Save</button>
+          </div>
+          <div class="field-row-stacked" style="width: 760px">
+            <p> Commands </p>
+            <button class="default" onclick="reboot()">Reboot Now</button>
+            <button class="default" onclick="toggle_ssh()">Toggle SSH. (Currently Enabled={{ admin.ssh_enabled }})</button>
           </div>
         </div>
       </div>
@@ -158,6 +170,26 @@
             })
             )
       };
+
+      function reboot() {
+        fetch("/reboot",  {method: "POST", body: JSON.stringify({reboot:"reboot"}) })
+        .then(resp=> resp.json()
+            .then(msg=>{
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            }))
+      }
+
+       function toggle_ssh() {
+        fetch("/toggle_ssh",  {method: "POST", body: JSON.stringify({ssh:"toggle"}) })
+        .then(resp=> resp.json()
+            .then(msg=>{
+              alert(msg.message);
+              if(msg.status === "ok") window.location.reload();
+            }))
+
+            alert("attemping to toggle SSH. Please wait a few seconds.")
+      }
 
       // adjust download sizing in iframe
       const iframe = document.querySelector("iframe");

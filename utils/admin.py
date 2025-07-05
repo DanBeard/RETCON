@@ -38,6 +38,21 @@ class RetconAdmin:
     def reboot(self):
         # trigger the shutdown
         subprocess.Popen(f"sleep 3; sudo reboot",shell=True)
+        
+    def toggle_ssh(self):
+        status = self.ssh_enabled
+        
+        # toggle it off or on
+        if status:
+            subprocess.Popen(f"sudo systemctl stop ssh", shell=True)
+        else:
+            subprocess.Popen(f"sudo systemctl start ssh", shell=True)
+            
+    @property
+    def ssh_enabled(self):
+         p = subprocess.Popen("sudo systemctl status ssh", shell=True, stdout=subprocess.PIPE)
+         out, err = p.communicate()
+         return b"active (running)" in out
     
     @property
     def profile_name(self):

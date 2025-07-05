@@ -22,4 +22,5 @@ mmdebstrap:
     - git 
     - rpi-update
     - cron
+    - iptables
 

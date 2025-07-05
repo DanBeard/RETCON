@@ -50,6 +50,14 @@ pip install --only-binary ':all:' sdbus-networkmanager
 echo installing python requirements
 pip install -r requirements.txt
 
+# install web-apps
+cd utils/client_web_ui/static
+#rnode web flasher
+git clone https://github.com/liamcottle/rnode-flasher
+cd ../../../
+# end rnode web-flasher
+
+
 # install apps
 mkdir -p ./apps
 cd ./apps
@@ -84,12 +92,13 @@ cd ../
 # end meshchat
 
 # nodogsplash for captive portal
-sudo apt-get install libmicrohttpd-dev
-git clone https://github.com/nodogsplash/nodogsplash.git
-cd nodogsplash
-make
-sudo make install
-cd ../
+# Disabled for now -- we're handling it through just clever DNSmasq rules
+# sudo apt-get install libmicrohttpd-dev
+# git clone https://github.com/nodogsplash/nodogsplash.git
+# cd nodogsplash
+# make
+# sudo make install
+# cd ../
 #end nodogsplash
 # download custom interfaces into ./apps/interfaces
 mkdir interfaces

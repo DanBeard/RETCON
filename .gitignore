@@ -1,5 +1,7 @@
 # apps folder with installed apps
 apps/
+#artifacts folder with binary artifacts like firmware
+artifacts/
 
 # generic python gitignore below
 # Byte-compiled / optimized / DLL files

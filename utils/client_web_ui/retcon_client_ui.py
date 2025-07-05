@@ -5,7 +5,10 @@ import os
 import sys
 import subprocess
 
-# dirty hack that allows us to run this as a flask entry point ANY take advantage of code reuse
+from flask_file_explorer.file_explorer import file_explorer_bp  # The blueprint code
+from flask_file_explorer.filters import register_filters        # Filters used in the viewer
+
+# dirty hack that allows us to run this as a flask entry point AND take advantage of code reuse
 util_path = os.path.dirname(os.path.realpath(__file__)) + "/../"
 print(util_path)
 sys.path.append(util_path)
@@ -14,6 +17,11 @@ from admin import RetconAdmin
 
 app = Flask(__name__)
 admin = RetconAdmin("UNKNOWN")
+
+# file browser
+app.config["FFE_BASE_DIRECTORY"] = util_path + '../artifacts'         # The directory the explorer is limited to
+app.register_blueprint(file_explorer_bp, url_prefix='/file-explorer')   # Add the blueprint to the flask app
+register_filters(app)                                                   # Register the filter
 
 @app.route('/')
 def index():

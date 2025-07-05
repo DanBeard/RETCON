@@ -33,6 +33,22 @@ mmdebstrap:
     echo ${IGconf_device_user1} ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff > /etc/sudoers.d/011-retcon-reboot
     echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/nodogsplash > /etc/sudoers.d/011-retcon-nodogsplash
     
+    # dnsmasq config
+    cat > /etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf <<EOCFGL
+    address=/con/10.42.0.1
+    address=/retcon/10.42.0.1
+    address=/retcon.com/10.42.0.1
+    address=/retcon.net/10.42.0.1
+    address=/retcon.org/10.42.0.1
+    address=/ret.con/10.42.0.1
+    address=/ret.com/10.42.0.1
+    address=/retcon.local/10.42.0.1
+    address=/retcon.radio/10.42.0.1
+    EOCFGL
+
+    # download all the firware artifacts
+    cd /home/$IGconf_device_user1/retcon/utils
+    python3 download_firmware.py
     EOCHROOT
   
 #  cleanup-hooks:

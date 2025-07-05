@@ -28,7 +28,7 @@
     <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
       <div class="title-bar">
         <div class="title-bar-text">
-          RETCON!1!!One!1!
+          RETCON!1!!One!1!  v0.0.2
         </div>
 
         <div class="title-bar-controls">
@@ -46,6 +46,7 @@
       <menu role="tablist">
         <li role="tab" id="tab-apps" ><a href="#apps" onclick="changeTab('apps')">Applications</a></li>
         <li role="tab" id="tab-wifi" ><a href="#wifi" onclick="changeTab('wifi')" >Wifi Setup</a></li>
+        <li role="tab" id="tab-files"><a href="#files" onclick="changeTab('files')">Files</a></li>
         <li role="tab" id="tab-advanced"><a href="#advanced" onclick="changeTab('advanced')">Advanced</a></li>
         <li role="tab" id="tab-credits"><a href="#credits" onclick="changeTab('credits')">Credits</a></li>
       </menu>
@@ -54,6 +55,7 @@
         <div class="window-body">
           <h3> Applications: </h3>
           <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a>
+          <a class="xlarge" target="_blank" href="/static/rnode-flasher/index.html">Rnode Web Flasher</a>
         </div>
       </div>
 
@@ -69,6 +71,12 @@
             <input id="client_ap_psk" type="text" value="{{admin.client_ap_psk}}" />
           </div>
           <button class="default" onclick="save_wifi()">Save</button>
+        </div>
+      </div>
+
+      <div class="window tab-content" role="tabpanel" id="content-files">
+        <div class="window-body">
+          <iframe width="750px" height="600px" src="/file-explorer/browse" ></iframe>
         </div>
       </div>
 
@@ -150,6 +158,15 @@
             })
             )
       };
+
+      // adjust download sizing in iframe
+      const iframe = document.querySelector("iframe");
+
+      iframe.addEventListener("load", () => {
+          const childDoc = iframe.contentDocument;
+          const fileDiv = childDoc.querySelector(".file-explorer");
+          fileDiv.style.width = "70vw";
+      });
 
     </script>
   </body>

@@ -33,6 +33,7 @@ mmdebstrap:
     echo ${IGconf_device_user1} ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff > /etc/sudoers.d/011-retcon-reboot
     echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/nodogsplash > /etc/sudoers.d/011-retcon-nodogsplash
     echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/systemctl > /etc/sudoers.d/011-retcon-systemctl
+    echo ${IGconf_device_user1} ALL=NOPASSWD: /usr/bin/date > /etc/sudoers.d/011-retcon-date
 
 
     # dnsmasq config

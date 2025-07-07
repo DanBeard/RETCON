@@ -64,6 +64,16 @@ def toggle_ssh():
     admin.toggle_ssh()
     time.sleep(2)
     return jsonify({ "message" : f"SSH Enabled = {admin.ssh_enabled}", "status": "ok"})
+
+@app.route('/set_time', methods=['POST'])
+def set_time():
+    post = json.loads(request.data)
+    epoch = post.get("epoch", 0)
+    if epoch > 1751917835 and epoch < 5000000000:
+        result = admin.set_time(epoch)
+        return jsonify({ "message" : result, "status": "ok"})
+    else:
+        return jsonify({ "message" : f"{epoch} is not a valid unix epoch. Eopich must be int, and seconds. Must be between 1751917835 and  5000000000", "status": "error"})
    
 # main driver function
 if __name__ == '__main__':

@@ -48,6 +48,11 @@ class RetconAdmin:
         else:
             subprocess.Popen(f"sudo systemctl start ssh", shell=True)
             
+    def set_time(self, epoch):
+        p = subprocess.Popen(f"sudo date -s '@{epoch}'", shell=True, stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        return out
+            
     @property
     def ssh_enabled(self):
          p = subprocess.Popen("sudo systemctl status ssh", shell=True, stdout=subprocess.PIPE)

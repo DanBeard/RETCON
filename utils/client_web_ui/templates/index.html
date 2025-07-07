@@ -28,7 +28,7 @@
     <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
       <div class="title-bar">
         <div class="title-bar-text">
-          RETCON!1!!One!1!  v0.0.3
+          RETCON!1!!One!1!  v0.0.4
         </div>
 
         <div class="title-bar-controls">
@@ -199,6 +199,19 @@
           const fileDiv = childDoc.querySelector(".file-explorer");
           fileDiv.style.width = "70vw";
       });
+
+      // on load update our time based on the client
+      function sync_time () {
+        const epoch = Date.now()/1000;
+        fetch("/set_time",  {method: "POST", body: JSON.stringify({epoch:epoch}) })
+        .then(resp=> resp.json()
+            .then(msg=>{
+              if(msg.status === "ok") console.log(msg);
+              else console.error(msg)
+            }))
+      }
+
+      sync_time();
 
     </script>
   </body>

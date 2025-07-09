@@ -120,6 +120,20 @@ rm -rf $HOME/.reticulum || true
 # remake
 mkdir -p $HOME/.reticulum
 
+rm -rf $HOME/.retcon || true
+mkdir -p $HOME/.retcon
+
+# Begin proxy install 
+# generate a tls cert and install http-proxy so browsers don't complain about http
+# NOTE: This provides only the thinnest veneer of security. It's just to shut the browsers security policy up.
+# ANYONE on the client-side wifi should be trested as trusted. Change your client PSK and only give it out to trusted users!!
+openssl req -x509 -newkey rsa:4096 -keyout $HOME/.retcon/key.pem -out $HOME/.retcon/cert.pem -sha256 -days 365000 -nodes -subj "/CN=retcon"
+
+cd $SCRIPTPATH/utils/client_web_ui/tls_proxy
+npm install
+# end proxy install 
+cd $SCRIPTPATH
+
 #soft link interface folder to here
 ln -s  "$SCRIPTPATH/apps/interfaces" $HOME/.reticulum/interfaces
 

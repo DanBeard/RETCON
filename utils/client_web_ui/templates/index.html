@@ -28,7 +28,7 @@
     <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
       <div class="title-bar">
         <div class="title-bar-text">
-          RETCON!1!!One!1!  v0.0.4
+          RETCON!1!!One!1!  v0.0.5
         </div>
 
         <div class="title-bar-controls">
@@ -54,7 +54,7 @@
       <div class="window tab-content"  role="tabpanel" id="content-apps" >
         <div class="window-body">
           <h3> Applications: </h3>
-          <a class="xlarge" href="/" onmouseover="javascript:event.target.port=8000">Reticulum MeshChat</a> <--- Use this to chat and browse 
+          <a class="xlarge" href="/" id='meshchatLink' >Reticulum MeshChat</a> <--- Use this to chat and browse 
           <br />
           <br />
           <a class="xlarge" target="_blank" href="/static/rnode-flasher/index.html">Rnode Web Flasher</a> <--- Use this to flash Rnodes (requires chrome :( )
@@ -199,6 +199,14 @@
           const fileDiv = childDoc.querySelector(".file-explorer");
           fileDiv.style.width = "70vw";
       });
+
+      function setMeshchatLink() {
+        const portNum = (window.location.protocol == 'https:') ? 8443 : 8000
+        document.getElementById('meshchatLink').href = window.location.protocol + "//" + window.location.hostname + ":" + portNum;
+        //event.target.port=((location.protocol == 'https:') ? 8443 : 8000)
+      }
+
+      setMeshchatLink();
 
       // on load update our time based on the client
       function sync_time () {

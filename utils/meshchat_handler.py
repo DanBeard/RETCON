@@ -25,7 +25,7 @@ class MeshchatHandle():
             f"authbind --deep python {dir_path}/client_web_ui/retcon_client_ui.py {ssid}", 
             shell=True, env=current_env)
         
-        time.sleep(2)
+        time.sleep(1)
         
         print("starting retcon TLS proxy")
         # and the reverse proxy for tls

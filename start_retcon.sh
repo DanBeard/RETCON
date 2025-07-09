@@ -7,6 +7,9 @@ sudo systemctl disable ssh || true
 cd "$(dirname "$0")"
 
 source ./venv/bin/activate
+source $HOME/.nvm/nvm.sh
+nvm use default
+
 
 echo "Starting retcon in 3"
 sleep 3

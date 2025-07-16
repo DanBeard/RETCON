@@ -10,6 +10,7 @@ mmdebstrap:
   - |-
     mkdir $1/home/$IGconf_device_user1/retcon
     cp -r $IGconf_ext_nsdir/../../* $1/home/$IGconf_device_user1/retcon
+    cp  $1/home/$IGconf_device_user1/retcon/README.md $1/README.md
   - |-
     chroot $1 bash -- <<- EOCHROOT
     cd /home/$IGconf_device_user1/retcon

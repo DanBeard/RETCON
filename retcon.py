@@ -49,7 +49,7 @@ if __name__ == "__main__":
     
     # startup the ap, this is the same  whether we're a transport or client
 
-    # are we just a transport? or should we launch uis?
+    # are we just a transport? or should we launch ui?
     is_transport = r_config.get("mode", "client") == "transport"
     is_client = r_config.get("mode", "client") == "client"
     
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         process.wait()
     
     print("Brought up AP now letting it settle")
-    time.sleep(10)
+    time.sleep(8)
     
     rnsd_tasks=[]
     
@@ -149,10 +149,10 @@ if __name__ == "__main__":
     #tasks to run if we're in ui mode
     # these wont be run if we're in transport mode
     async def run_ui_tasks():
-        await asyncio.sleep(5) # sleep for 5 seconds to allow server to settle
+        await asyncio.sleep(3) # sleep for a few seconds to allow server to settle
         print("Starting meshchat")
-        MeshchatHandle.start_meshchat(ap_iface, ssid)
-        await asyncio.sleep(1)
+        MeshchatHandle.start_meshchat(ap_iface, ssid, config)
+        await asyncio.sleep(2)
     
     async def run():
         # busy loop so we don't exit

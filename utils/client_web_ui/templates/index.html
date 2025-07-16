@@ -28,7 +28,7 @@
     <div class="window" style="margin-left: auto; margin-right:auto; width: 800px">
       <div class="title-bar">
         <div class="title-bar-text">
-          RETCON!1!!One!1!  v0.0.5
+          RETCON!1!!One!1!  v0.0.6
         </div>
 
         <div class="title-bar-controls">
@@ -71,7 +71,7 @@
           
           <div class="field-row">
             <label class="large" for="wifi_ssid">Wifi SSID</label>
-            <input id="wifi_ssid" type="text" value="{{admin.name}}" disabled />
+            <input id="wifi_ssid" type="text" value="{{admin.name}}" />
           </div>
           <div class="field-row">
             <label class="large" for="client_ap_psk">Wifi Pass</label>
@@ -98,6 +98,10 @@
             <p> Commands </p>
             <button class="default" onclick="reboot()">Reboot Now</button>
             <button class="default" onclick="toggle_ssh()">Toggle SSH. (Currently Enabled={{ admin.ssh_enabled }})</button>
+          </div>
+          <div class="field-row-stacked" style="width: 760px">
+            <p> Danger Zone </p>
+            <button class="default" onclick="reset_reticulum_config()">Reset Reticulum Config (WARNING: THIS WILL ERASE EVERYTHING IN MESHCHAT)</button>
           </div>
         </div>
       </div>
@@ -144,6 +148,7 @@
       function save_wifi() {
         //just PSK for now
         data = {
+          client_ap_ssid: document.getElementById('wifi_ssid').value || "not set", 
           client_ap_psk: document.getElementById('client_ap_psk').value || "not set"
         }
 
@@ -220,6 +225,17 @@
       }
 
       sync_time();
+
+      function reset_reticulum_config () {
+        fetch("/reset_reticulum_config",  {method: "POST", body: JSON.stringify({do_reset:1}) })
+        .then(resp=> resp.json()
+            .then(msg=>{
+              if(msg.status === "ok") console.log(msg);
+              else console.error(msg)
+            }))
+
+            alert("Sent reset and reboot commands. Wait a few seconds then re-connect")
+      }
 
     </script>
   </body>

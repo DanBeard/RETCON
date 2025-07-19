@@ -11,6 +11,12 @@ prompt_confirm() {
   done  
 }
 
+pathadd() {
+    if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
+        PATH="${PATH:+"$PATH:"}$1"
+    fi
+}
+
 # make sure our pwd is the same as the script
 SCRIPT=$(realpath "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
@@ -42,6 +48,10 @@ echo "Non debian based distros (e.g. fedora, arch, etc) will probably not work"
 echo ""
 
 prompt_confirm "ok to run?" || exit 0
+
+# ensure /usr/sbin is in path since it isn't normally for non-root user
+pathadd "/usr/sbin"
+pathadd "/sbin"
 
 sudo rm -rf $HOME/.retcon-build || true
 

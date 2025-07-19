@@ -65,8 +65,8 @@ class MeshchatHandle():
                 cur = con.cursor()
                 
                 # have we already modified the config?
-                already_modified = cur.execute("SELECT value FROM config WHERE key='retcon_modified'").fetchone()
-                if already_modified is not None and already_modified == 1:
+                already_modified = cur.execute("SELECT value FROM config WHERE key='retcon_modified';").fetchone()
+                if already_modified is not None and (already_modified[0] == 1 or already_modified[0] == '1'):
                     print("Already modified, ejecting...")
                     return
                 

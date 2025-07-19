@@ -4,8 +4,10 @@ import uuid
 import sys
 import os
 import time
+import re 
 from jinja2 import Template
 import sdbus
+import netifaces as ni
 from sdbus_async.networkmanager import (
     NetworkManager,
     NetworkDeviceWireless,
@@ -25,6 +27,27 @@ auto_iface_template = """
   devices = {{iface}}
   
   """
+  
+tcp_server_iface_template = """
+  [[TCP Server Interface]]
+  type = TCPServerInterface
+  enabled = yes
+  mode= {{mode}}
+  device = {{iface}}
+  name = retcon_tcp_server_iface_{{iface}}
+  listen_port = 4242
+  
+  """
+  
+tcp_client_iface_template = """
+  [[TCP Client Interface]]
+  type = TCPClientInterface
+  enabled = yes
+  mode= {{mode}}
+  name = retcon_tcp_client_iface_{{iface}}
+  target_host = retcon.gateway
+  target_port = 4242
+  """
 
 class WifiMeshPlugin(RetconPlugin):
 
@@ -38,8 +61,14 @@ class WifiMeshPlugin(RetconPlugin):
     # (for example) plugin_interfaces
     def get_config(self) -> dict:
         wifi = self.retcon_config["retcon"]["wifi"]
-        interface_str =  Template(auto_iface_template).render(iface=wifi['client_iface'], mode="full")
-        interface_str += Template(auto_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
+        
+        # Auto interface is too flaky with changing topologies 
+        #interface_str =  Template(auto_iface_template).render(iface=wifi['client_iface'], mode="full")
+        #interface_str += Template(auto_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
+        
+        # tcp interfaces
+        interface_str =  Template(tcp_client_iface_template).render(iface=wifi['client_iface'], mode="full")
+        interface_str += Template(tcp_server_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
         return {
             "plugin_interfaces" : interface_str
         }
@@ -53,6 +82,9 @@ class WifiMeshPlugin(RetconPlugin):
         script_path = os.path.realpath(__file__)
         wifi = self.retcon_config["retcon"]["wifi"]
         ap_iface = wifi['ap_iface'] if self.retcon_config["retcon"]["mode"] == 'transport' else None
+        if ap_iface:
+            self.transport_update_dnsmasq(ap_iface)
+            
         mesh = RetconMesh(wifi['prefix'].encode(), wifi['psk'], int(wifi['freq']), wifi['client_iface'], ap_iface)
         self.mesh = mesh
         #return mesh.mesh_up(self)
@@ -60,6 +92,18 @@ class WifiMeshPlugin(RetconPlugin):
         #     f"python {script_path} '{wifi['prefix']}' '{wifi['psk']}' {wifi['freq']} '{wifi['client_iface']}' '{ap_iface}' ", 
         #     shell=True, env=current_env)
 
+
+    def transport_update_dnsmasq(self, ap_iface):
+        # update the DNS masd file so retcon stuff points to us
+        # only for transport nodes
+        ip = ni.ifaddresses(ap_iface)[ni.AF_INET][0]['addr']
+        urls = ["retcon.gateway", "retcon.local", "retcon.radio", "retcon.com", "retcon"]
+        redirect_str = "\n".join(f"address=/{x}/{ip}" for x in urls)
+        config_path = "/etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf"
+        with open(config_path, "w") as fout:
+            fout.write(redirect_str)
+        
+        
     async def loop(self):
         await self.mesh.mesh_up(self)
     
@@ -152,7 +196,11 @@ class RetconMesh:
                 
                 self._client_ap_choices = valid_aps
                 if len(self._client_ap_choices) > 0:
-                    await self.connect_client()
+                    try:
+                        await self.connect_client()
+                    except Exception as e:
+                        print("ERROR! " + str(e))
+                        print("re-looping")
             
             # wait before next scan
             await asyncio.sleep(5)
@@ -207,9 +255,37 @@ class RetconMesh:
         )
         
         self._last_client_connection_time = time.time()
-        await asyncio.sleep(25)
+        
+        # After we have dchp, change /etc/hosts so retcon.gateway goes to our gateway
+        retry = 10
+        ip = None
+        
+        while ip is None and retry > 0:
+            try:
+                print("Attemping to get IP for TCP client")
+                await asyncio.sleep(5)
+                retry-=1
+                ip = ni.ifaddresses(self.client_iface)[ni.AF_INET][0]['addr']
+                print(f"Got IP {ip}")
+            except: 
+                pass
+            
+        if ip is None:
+            await self.client.disconnect()
+            
+        with open("/etc/hosts", 'r') as fin:
+            print("Reading hosts file")
+            hosts = fin.read()
+     
+        with open("/etc/hosts", "w") as fout:
+            fout.write(re.sub(r'\d+\.\d+\.\d+\.\d+ retcon\.gateway','',hosts))
+            gateway_ip = '.'.join(ip.split(".")[0:3] + ['1'])
+            print(f"Writing gateway_ip = {gateway_ip} to hosts file")
+            fout.write(f"\n{gateway_ip} retcon.gateway")
+        
         print("Dynamically rebooting reticulum")
         await self.plugin.restart_rnsd()
+        await asyncio.sleep(10)
         print("done")
 
             
@@ -219,6 +295,7 @@ class RetconMesh:
             return None
         
         active_ap_path = await self.client.active_access_point
+        #print(f"active_ap_path={active_ap_path}")
         if len(active_ap_path) <3:
             return None
         

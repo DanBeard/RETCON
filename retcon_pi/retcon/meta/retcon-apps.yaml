@@ -56,6 +56,10 @@ mmdebstrap:
     address=/mask-h2.icloud.com/
     EOCFGL
 
+    #TODO maybe add retcon user to group or something instead of just a+w here? 
+    chmod a+w /etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf
+    chmod a+w /etc/hosts
+
     # download all the firware artifacts
     cd /home/$IGconf_device_user1/retcon/utils
     python3 download_firmware.py

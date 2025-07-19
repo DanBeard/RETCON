@@ -71,6 +71,16 @@ if __name__ == "__main__":
         psk = wifi_config['psk']
         
     channel = wifi_freq_to_channel[int(wifi_config["freq"])]
+    if is_transport:
+        # we can't have collisions so use the las bits of the node_id to generate an ipv4 subnet range 
+        ip_subnet_bytes = (node_id  & 0xFFFF).to_bytes(2)
+        # avoid collisions with client AP. That will girnd things to a hault for them
+        if ip_subnet_bytes[0] == 42 and ip_subnet_bytes[1] == 1:
+            ip_subnet_bytes = [42,2]
+        ip_subnet_str = f"10.{ip_subnet_bytes[0]}.{ip_subnet_bytes[1]}.1/24"
+    else:
+        ip_subnet_str ="10.42.0.1/24" # need these to always be the same for DNS to work and this is the default
+    
     
     # TODO: We should really use dbus directly for this, but nmcli is so much easier
     # Setup wifi interfaces
@@ -81,7 +91,7 @@ if __name__ == "__main__":
         f"nmcli con add con-name retcon_ap ifname {ap_iface} type wifi ssid '{ssid}'",
         f"nmcli con modify retcon_ap wifi-sec.key-mgmt wpa-psk",
         f"nmcli con modify retcon_ap wifi-sec.psk '{psk}' ",
-        f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared"
+        f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared ipv4.addresses {ip_subnet_str}"
     ]
     for command in commands:
         print(command)
@@ -89,7 +99,7 @@ if __name__ == "__main__":
         process.wait()
     
     print("Brought up AP now letting it settle")
-    time.sleep(8)
+    time.sleep(10)
     
     rnsd_tasks=[]
     

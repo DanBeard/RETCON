@@ -32,8 +32,11 @@ def index():
 def wifi():
     try:
         post = json.loads(request.data)
+        client_ap_ssid = post["client_ap_ssid"]
         client_ap_psk = post["client_ap_psk"]
+        
         admin.client_ap_psk = client_ap_psk
+        admin.client_ap_ssid = client_ap_ssid
         
         return jsonify({ "message" : "Config Saved. Changes only take effect after a reboot.", "status": "ok"})
     except Exception as e:
@@ -75,6 +78,20 @@ def set_time():
         return jsonify({ "message" : "set", "status": "ok"})
     else:
         return jsonify({ "message" : f"{epoch} is not a valid unix epoch. Eopich must be int, and seconds. Must be between 1751917835 and  5000000000", "status": "error"})
+   
+   
+@app.route('/reset_reticulum_config', methods=['POST'])
+def reset_reticulum_config():
+    print("RESETTING", request.data)
+    post = json.loads(request.data)
+    do_it = post.get("do_reset", 0)
+    if do_it == 1:
+        admin.reset_reticulum_config()
+        time.sleep(1)
+        admin.reboot()
+        return jsonify({ "message" : "set", "status": "ok"})
+    else:
+        return jsonify({ "message" : "do_reset must be = 1"})
    
 # main driver function
 if __name__ == '__main__':

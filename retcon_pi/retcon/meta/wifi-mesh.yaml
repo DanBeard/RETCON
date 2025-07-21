@@ -14,7 +14,6 @@ mmdebstrap:
   - |-
     chroot $1 bash -- <<- EOCHROOT
     source /home/$IGconf_device_user1/setup-wifi-mesh
-    #install_secrets $IGconf_device_user1 $IGconf_acme_dev_server
     touch /home/$IGconf_device_user1/retcon.INSTALLED
     echo "@reboot $IGconf_device_user1/retcon/start_retcon.sh" > /var/spool/cron/crontabs/$IGconf_device_user1
     printenv > /home/$IGconf_device_user1/retcon.ENV

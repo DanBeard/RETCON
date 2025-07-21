@@ -17,7 +17,8 @@ if(bindIp) {
     ssl: {
         key: fs.readFileSync(homedir+'/.retcon/key.pem', 'utf8'),
         cert: fs.readFileSync(homedir+'/.retcon/cert.pem', 'utf8')
-    }
+    },
+    ws:true,
     }).listen(8443, bindIp);
 
     httpProxy.createServer({
@@ -28,7 +29,8 @@ if(bindIp) {
     ssl: {
         key: fs.readFileSync(homedir+'/.retcon/key.pem', 'utf8'),
         cert: fs.readFileSync(homedir+'/.retcon/cert.pem', 'utf8')
-    }
+    },
+    ws:true
     }).listen(443, bindIp);
 } else {
     console.log("Exiting, no bind ip set")

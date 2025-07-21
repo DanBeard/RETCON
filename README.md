@@ -1,4 +1,4 @@
-# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.5
+# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.6
 
 Because complex networks shouldn't require complex setup.
 
@@ -113,13 +113,15 @@ Contributions are welcome and appreciated!
 - [x] Client mode where wifi AP password is different meshchat is launched automatically
 - [x] Web based app in client mode to instruct users how to connect to meshchat and change wifi ap details
 - [x] Captive portal in client mode directing to web app (retcon.local)
-- [ ] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
+- [x] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
 - [x] Ability to change from client to transport mode via admin interfaces
 - [x] Ability to change from client mode details from admin interface (like AP password)
 - [ ] Configure rpi-image-gen from retcon config (for things like ssh, username and extra apt packages)
 - [ ] Nomadnet/micron configuration interface for field adjustments
 - [ ] 'microRetcon' for hardware platforms (ESP32, etc.)
 - [ ] Integration with more transports (Bluetooth mesh, additional radio modules)
+- [ ] Better error handling around meshchat crashed
+- [ ] Wifi Mesh 2.0 protocol using raw 802.11 data frames (requires monitor mode. If you know how to do this let me know)
 
 
 ### Debugging, Dev and security Tips
@@ -127,9 +129,33 @@ Contributions are welcome and appreciated!
 SSH in enabled in the raspi build but disabled on first boot by RETCON. It can be temporarily turned on via the web interface. 
 default username is `retcon` and password is `retcon`. If the node is somewhere people have easy phsyical access to it (or if SSH server is turned on) then this absolutely needs to be changed! 
 
+You can change or configure files on teh SD card without booting. All retcon files are in `/home/retcon/retcon/` 
+
+
 ### Troubleshooting
 
-TODO 
+#### Wifi isn't connecting to the AP I set in wifi.prefix
+Make sure that the wifi frequencies are the same. Raspberry pi hardware can't connect to a network while hosting its own at the same time unless they are the same frequency. If you know the wifi channel, then use the below json object mapping (U.S. Based) to set the proper freqency:
+
+```
+wifi_channel_to_freq = {
+    1: 2412,
+    2: 2417,
+    3: 2422,
+    4: 2427,
+    5: 2432,
+    6: 2437,
+    7: 2442,
+    8: 2447,
+    9: 2452,
+    10: 2457,
+    11: 2462,
+    12: 2467,
+    13: 2472,
+    14: 2484
+}
+```
+Note. Only 2.4 Ghz wifi is supported for now. 
 
 ## License
 

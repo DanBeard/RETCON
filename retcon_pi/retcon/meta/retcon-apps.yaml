@@ -10,6 +10,7 @@ mmdebstrap:
   - |-
     mkdir $1/home/$IGconf_device_user1/retcon
     cp -r $IGconf_ext_nsdir/../../* $1/home/$IGconf_device_user1/retcon
+    cp  $1/home/$IGconf_device_user1/retcon/README.md $1/README.md
   - |-
     chroot $1 bash -- <<- EOCHROOT
     cd /home/$IGconf_device_user1/retcon
@@ -54,6 +55,10 @@ mmdebstrap:
     address=/mask.icloud.com/
     address=/mask-h2.icloud.com/
     EOCFGL
+
+    #TODO maybe add retcon user to group or something instead of just a+w here? 
+    chmod a+w /etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf
+    chmod a+w /etc/hosts
 
     # download all the firware artifacts
     cd /home/$IGconf_device_user1/retcon/utils

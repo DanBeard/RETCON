@@ -3,6 +3,9 @@
 sudo systemctl stop ssh || true
 sudo systemctl disable ssh || true
 
+echo "Starting retcon in 3"
+sleep 3
+
 # make sure our pwd is the same as the script
 cd "$(dirname "$0")"
 
@@ -11,7 +14,6 @@ source $HOME/.nvm/nvm.sh
 nvm use default
 
 
-echo "Starting retcon in 3"
-sleep 3
+
 python retcon.py
 

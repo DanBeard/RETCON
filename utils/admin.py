@@ -53,6 +53,9 @@ class RetconAdmin:
         out, err = p.communicate()
         return out
             
+    def reset_reticulum_config(self):
+        subprocess.Popen(f"cd ~/.reticulum && rm -rf `ls ~/.reticulum | grep -v interfaces`", shell=True)
+    
     @property
     def ssh_enabled(self):
          p = subprocess.Popen("sudo systemctl status ssh", shell=True, stdout=subprocess.PIPE)
@@ -88,6 +91,17 @@ class RetconAdmin:
     @client_ap_psk.setter
     def client_ap_psk(self, psk):
         self.config["retcon"]['wifi']['client_ap_psk'] = psk
+        self.config["retcon"]['client_info_changed'] = True
+        self.write_config()
+        
+    @property
+    def client_ap_ssid(self):
+        print(self.config["retcon"]['wifi'])
+        return self.config["retcon"]['wifi'].get('client_ap_prefix',"")
+    
+    @client_ap_ssid.setter
+    def client_ap_ssid(self, ssid):
+        self.config["retcon"]['wifi']['client_ap_prefix'] = ssid
         self.config["retcon"]['client_info_changed'] = True
         self.write_config()
         

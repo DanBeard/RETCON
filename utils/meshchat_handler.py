@@ -3,9 +3,14 @@ import os
 import netifaces as ni
 import time
 import sqlite3
+from jinja2 import Template
 from glob import glob 
 
-
+restart_template = """
+until {{command}}; do
+    echo "{{command}} crashed. Restarting"
+done
+"""
 class MeshchatHandle():
     
     _singleton = None
@@ -24,7 +29,7 @@ class MeshchatHandle():
         cls.alter_meshchat_config(retcon_config)
         
         cls._singleton = subprocess.Popen(
-            f"python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}", 
+            Template(restart_template).render(command=f"python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}"), 
             shell=True, env=current_env)
         
         time.sleep(0.25)
@@ -32,7 +37,7 @@ class MeshchatHandle():
         print("starting retcon client homepage")
         # Also launch the retcon homepage!
         cls._homepage_singleton = subprocess.Popen(
-            f"authbind --deep python {dir_path}/client_web_ui/retcon_client_ui.py {ssid}", 
+            Template(restart_template).render(command=f"authbind --deep python {dir_path}/client_web_ui/retcon_client_ui.py {ssid}"), 
             shell=True, env=current_env)
         
         time.sleep(0.25)
@@ -40,7 +45,7 @@ class MeshchatHandle():
         print("starting retcon TLS proxy")
         # and the reverse proxy for tls
         cls._tls_proxy_singletone = subprocess.Popen(
-            f"authbind --deep node proxy.js {ip}", 
+            Template(restart_template).render(command=f"authbind --deep node proxy.js {ip}"), 
             shell=True, env=current_env, cwd=f"{dir_path}/client_web_ui/tls_proxy")
         
        

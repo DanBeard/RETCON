@@ -9,6 +9,7 @@ from glob import glob
 restart_template = """
 until {{command}}; do
     echo "{{command}} crashed. Restarting"
+    sleep 5
 done
 """
 class MeshchatHandle():

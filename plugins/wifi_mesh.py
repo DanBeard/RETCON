@@ -29,23 +29,23 @@ auto_iface_template = """
   """
   
 tcp_server_iface_template = """
-  [[TCP Server Interface]]
-  type = TCPServerInterface
+  [[Wifi Mesh Server Interface]]
+  type = BackboneInterface
   enabled = yes
   mode= {{mode}}
   device = {{iface}}
   name = retcon_tcp_server_iface_{{iface}}
-  listen_port = 4242
+  port = 4242
   
   """
   
 tcp_client_iface_template = """
-  [[TCP Client Interface]]
-  type = TCPClientInterface
+  [[WifiMesh Client Interface]]
+  type = BackboneInterface
   enabled = yes
   mode= {{mode}}
   name = retcon_tcp_client_iface_{{iface}}
-  target_host = retcon.gateway
+  remote = retcon.gateway
   target_port = 4242
   """
 

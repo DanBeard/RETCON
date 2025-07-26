@@ -15,6 +15,9 @@ from sdbus_async.networkmanager import (
     AccessPoint,
 )
 from .base_plugin import RetconPlugin
+import logging
+logger = logging.getLogger("retcon")
+
 
 auto_iface_template = """
 
@@ -75,7 +78,7 @@ class WifiMeshPlugin(RetconPlugin):
         
     # An init function that will get called on RETCON startup for init/bootstrapping
     def init(self) -> None:
-        print("Init RETCON wifimesh plugin")
+        logger.info("Init RETCON wifimesh plugin")
 
         # use multiprocessing for this
         current_env = os.environ.copy()
@@ -117,7 +120,7 @@ class RetconMesh:
         # explicit type check since it's so easy to mess up
         if type(ssid_prefix) == str:
             raise Exception("ssid_prefix must be BYTES not STRING")
-        print(ssid_prefix)
+        logger.info(ssid_prefix)
         self.ssid_prefix = ssid_prefix
         self.password = password
         self.freq = freq
@@ -150,12 +153,12 @@ class RetconMesh:
             if name == self.client_iface:
                 self.client = generic_device
                 self._client_path = device_path
-                print('Client : ', await generic_device.interface)
+                logger.info('Client : ', await generic_device.interface)
             elif name == self.ap_iface:
                 self.ap = generic_device
-                print('AP     : ', await generic_device.interface)
+                logger.info('AP     : ', await generic_device.interface)
             else:
-                print('       : ', await generic_device.interface)
+                logger.info('       : ', await generic_device.interface)
                 
         if self.client is None:
             raise ConnectionError("Could not find client iface " + self.client_iface)
@@ -174,12 +177,12 @@ class RetconMesh:
     async def _scan_loop(self):
         while self._active:
             if await self._should_scan():
-                print("Scanning...")
+                logger.info("Scanning...")
                 await self.client.request_scan({})
-                print("Sleeping...")
+                logger.info("Sleeping...")
                 await asyncio.sleep(3)
                 ap_paths = await self.client.access_points
-                print("Aping...")
+                logger.info("Aping...")
                 all_aps = [AccessPoint(p) for p in ap_paths]
 
                 # limit to only ones that match our prefix
@@ -191,16 +194,16 @@ class RetconMesh:
                         if freq == self.freq:
                             valid_aps.append(ap)
                         else:
-                            print("WARNING: found SSID prefix that matched but wrong freq. ")
-                            print(f"Expected {self.freq} but ap with ssid={ssid} had {freq}")
+                            logger.warning("WARNING: found SSID prefix that matched but wrong freq. ")
+                            logger.warning(f"Expected {self.freq} but ap with ssid={ssid} had {freq}")
                 
                 self._client_ap_choices = valid_aps
                 if len(self._client_ap_choices) > 0:
                     try:
                         await self.connect_client()
                     except Exception as e:
-                        print("ERROR! " + str(e))
-                        print("re-looping")
+                        logger.error("ERROR! " + str(e))
+                        logger.error("re-looping")
             
             # wait before next scan
             await asyncio.sleep(5)
@@ -209,7 +212,7 @@ class RetconMesh:
         # Go through all the valid APs and pick one to connect to
         aps = [(x, await x.ssid, await x.strength) for x in self._client_ap_choices]
         aps.sort(key=lambda y: y[2], reverse=True) # sort by strength DESC
-        print("APs :", aps)
+        logger.info("APs :", aps)
         if len(aps) == 0:
             return
         
@@ -231,7 +234,7 @@ class RetconMesh:
             if await active_ap.ssid != cand_ssid:
                 await self.client.disconnect()
 
-        print("connecting to ", cand_ssid)
+        logger.info("connecting to ", cand_ssid)
         connection = await NetworkManagerSettings().add_connection_unsaved(
             {
                 "connection": {
@@ -248,7 +251,7 @@ class RetconMesh:
             }
         )
         
-        print(connection)
+        logger.info(connection)
         
         await self.nm.activate_connection(
             connection=connection, device=self._client_path
@@ -262,11 +265,11 @@ class RetconMesh:
         
         while ip is None and retry > 0:
             try:
-                print("Attemping to get IP for TCP client")
+                logger.info("Attemping to get IP for TCP client")
                 await asyncio.sleep(5)
                 retry-=1
                 ip = ni.ifaddresses(self.client_iface)[ni.AF_INET][0]['addr']
-                print(f"Got IP {ip}")
+                logger.info(f"Got IP {ip}")
             except: 
                 pass
             
@@ -274,19 +277,19 @@ class RetconMesh:
             await self.client.disconnect()
             
         with open("/etc/hosts", 'r') as fin:
-            print("Reading hosts file")
+            logger.info("Reading hosts file")
             hosts = fin.read()
      
         with open("/etc/hosts", "w") as fout:
             fout.write(re.sub(r'\d+\.\d+\.\d+\.\d+ retcon\.gateway','',hosts))
             gateway_ip = '.'.join(ip.split(".")[0:3] + ['1'])
-            print(f"Writing gateway_ip = {gateway_ip} to hosts file")
+            logger.info(f"Writing gateway_ip = {gateway_ip} to hosts file")
             fout.write(f"\n{gateway_ip} retcon.gateway")
         
-        print("Dynamically rebooting reticulum")
+        logger.info("Dynamically rebooting reticulum")
         await self.plugin.restart_rnsd()
         await asyncio.sleep(10)
-        print("done")
+        logger.info("done")
 
             
     @property
@@ -295,7 +298,7 @@ class RetconMesh:
             return None
         
         active_ap_path = await self.client.active_access_point
-        #print(f"active_ap_path={active_ap_path}")
+        #logger.info(f"active_ap_path={active_ap_path}")
         if len(active_ap_path) <3:
             return None
         

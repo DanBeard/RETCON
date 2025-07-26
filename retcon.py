@@ -14,6 +14,10 @@ from base64 import a85encode
 from utils.rns_config_gen import generate_rns_config, get_recton_config
 from utils.meshchat_handler import MeshchatHandle
 
+import logging
+from logging.handlers import RotatingFileHandler
+logger = logging.getLogger("retcon")
+
 wifi_channel_to_freq = {
     1: 2412,
     2: 2417,
@@ -36,6 +40,14 @@ wifi_freq_to_channel = {f:c for c,f in wifi_channel_to_freq.items()}
 
 # This script will be our entry point for RETCON
 if __name__ == "__main__":
+    logger.setLevel(logging.DEBUG)
+    LOG_PATH = os.path.expanduser("~/retcon.log")
+
+    # Add the log message handler to the logger
+    handler = RotatingFileHandler(LOG_PATH, maxBytes=20*1024*1024, backupCount=4)
+
+    logger.addHandler(handler)
+
 
     # where are we now?
     dir_path = os.path.dirname(os.path.realpath(__file__)) 
@@ -56,7 +68,7 @@ if __name__ == "__main__":
     wifi_config = r_config["wifi"]
     
     if "prefix" not in wifi_config or "psk" not in wifi_config or "freq" not in wifi_config:
-        print("ERROR!  'prefix', 'psk', and freq are required in [[wifi]] section of config")
+        logger.info("ERROR!  'prefix', 'psk', and freq are required in [[wifi]] section of config")
         exit()
         
     client_iface = wifi_config["client_iface"]
@@ -94,11 +106,11 @@ if __name__ == "__main__":
         f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared ipv4.addresses {ip_subnet_str}"
     ]
     for command in commands:
-        print(command)
+        logger.info(command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
         process.wait()
     
-    print("Brought up AP now letting it settle")
+    logger.info("Brought up AP now letting it settle")
     time.sleep(10)
     
     rnsd_tasks=[]
@@ -110,7 +122,7 @@ if __name__ == "__main__":
         rnsd_tasks.append(t)
     
     async def restart_rnsd():
-        print("restarting rnsd")
+        logger.info("restarting rnsd")
         old_tasks = [x for x in rnsd_tasks]
         rnsd_tasks.clear()
         for t in old_tasks:
@@ -133,7 +145,7 @@ if __name__ == "__main__":
         
         #load all defined plugins
         for plugin_name, plugin_config in config.get("retcon_plugins",{}).items():
-            print("Loading plugin "+ plugin_name)
+            logger.info("Loading plugin "+ plugin_name)
             # spec = importlib.util.spec_from_file_location(plugin_name,f"{dir_path}/plugins/{plugin_name}.py")
             # mod  = importlib.util.module_from_spec(spec)
             # spec.loader.exec_module(mod)
@@ -160,7 +172,7 @@ if __name__ == "__main__":
     # these wont be run if we're in transport mode
     async def run_ui_tasks():
         await asyncio.sleep(3) # sleep for a few seconds to allow server to settle
-        print("Starting meshchat")
+        logger.info("Starting meshchat")
         MeshchatHandle.start_meshchat(ap_iface, ssid, config)
         await asyncio.sleep(2)
     
@@ -183,3 +195,6 @@ if __name__ == "__main__":
     asyncio.run(run())
     # now parse the retcon config and 
     #app.run(host="0.0.0.0")
+
+
+

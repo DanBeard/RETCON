@@ -35,7 +35,7 @@ class MeshchatHandle():
             Template(restart_template).render(command=f"find {dir_path}/../storage -type f -name '*.ratchets' -delete && python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}"), 
             shell=True, env=current_env)
         
-        time.sleep(0.25)
+        time.sleep(2.5)
                 
         logger.info("starting retcon client homepage")
         # Also launch the retcon homepage!

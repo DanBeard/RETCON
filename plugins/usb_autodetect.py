@@ -4,6 +4,9 @@ import meshtastic
 import meshtastic.serial_interface
 from .base_plugin import RetconPlugin
 
+import logging
+logger = logging.getLogger("retcon")
+
 meshtastic_config_template = """
   [[Meshtastic Interface]]
     type = Meshtastic_Interface
@@ -41,7 +44,7 @@ class UsbAutodetectPlugin(RetconPlugin):
     # and return any Jinja vars in reticulum.config template
     # (for example) plugin_interfaces
     def get_config(self) -> dict:
-        print("loading meshtastic plugin..........")
+        logger.info("loading meshtastic plugin..........")
         
         # the string we're going to append to rns config
         interface_str = ""
@@ -55,14 +58,14 @@ class UsbAutodetectPlugin(RetconPlugin):
             for port in ports:
                 if meshtastic_port is None: 
                     try:
-                        print(f"Trying to connect meshtastic to {port}")
+                        logger.info(f"Trying to connect meshtastic to {port}")
                         conn = meshtastic.serial_interface.SerialInterface(port)
                         time.sleep(1)
                         if conn.getMyNodeInfo() is not None:
                             meshtastic_port = port
                         conn.close()
                     except Exception as e:
-                        print(f"Couldn't connect to {port}. Got exception {e}")
+                        logger.error(f"Couldn't connect to {port}. Got exception {e}")
                 
                 
             if meshtastic_port is None:

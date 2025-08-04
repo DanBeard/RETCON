@@ -5,6 +5,8 @@ import time
 import sqlite3
 from jinja2 import Template
 from glob import glob 
+import logging
+logger = logging.getLogger("retcon")
 
 restart_template = """
 until {{command}}; do
@@ -21,21 +23,21 @@ class MeshchatHandle():
     @classmethod
     def start_meshchat(cls, iface, ssid, retcon_config):
         ip = ni.ifaddresses(iface)[ni.AF_INET][0]['addr']
-        print(f"Starting Meshchat on {ip}")
+        logger.info(f"Starting Meshchat on {ip}")
         current_env = os.environ.copy()
         dir_path = os.path.dirname(os.path.realpath(__file__))
         
         
-        print("Modifying meshchat config")
+        logger.info("Modifying meshchat config")
         cls.alter_meshchat_config(retcon_config)
         
         cls._singleton = subprocess.Popen(
-            Template(restart_template).render(command=f"python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}"), 
+            Template(restart_template).render(command=f"find {dir_path}/../storage -type f -name '*.ratchets' -delete && python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}"), 
             shell=True, env=current_env)
         
-        time.sleep(0.25)
+        time.sleep(2.5)
                 
-        print("starting retcon client homepage")
+        logger.info("starting retcon client homepage")
         # Also launch the retcon homepage!
         cls._homepage_singleton = subprocess.Popen(
             Template(restart_template).render(command=f"authbind --deep python {dir_path}/client_web_ui/retcon_client_ui.py {ssid}"), 
@@ -43,7 +45,7 @@ class MeshchatHandle():
         
         time.sleep(0.25)
         
-        print("starting retcon TLS proxy")
+        logger.info("starting retcon TLS proxy")
         # and the reverse proxy for tls
         cls._tls_proxy_singletone = subprocess.Popen(
             Template(restart_template).render(command=f"authbind --deep node proxy.js {ip}"), 
@@ -56,13 +58,13 @@ class MeshchatHandle():
         
         config = retcon_config.get("meshchat",{})
         if len(config) == 0:
-            print("No meshchat config overrides. ejecting...")
+            logger.info("No meshchat config overrides. ejecting...")
             return
         
         ident_path = os.path.expanduser("~/retcon/storage/identities/")
         database_paths = glob( ident_path + "*/database.db")
         if len(database_paths) == 0:
-            print(f"ERROR: Could not modify meshchat config. No database files at {ident_path}")
+            logger.info(f"ERROR: Could not modify meshchat config. No database files at {ident_path}")
             return
         
         for db_path in database_paths:
@@ -73,12 +75,12 @@ class MeshchatHandle():
                 # have we already modified the config?
                 already_modified = cur.execute("SELECT value FROM config WHERE key='retcon_modified';").fetchone()
                 if already_modified is not None and (already_modified[0] == 1 or already_modified[0] == '1'):
-                    print("Already modified, ejecting...")
+                    logger.info("Already modified, ejecting...")
                     return
                 
                 # we haven't modified the config yet, let's do it
                 for key, val in config.items():
-                    print(f"Setting {key}={val}")
+                    logger.info(f"Setting {key}={val}")
                     cur.execute("INSERT into config (key, value, created_at, updated_at) VALUES (?, ?, datetime(), datetime()) "
                         "ON CONFLICT(key) DO UPDATE SET value=?", (key, val, val))
                 

@@ -46,7 +46,8 @@ if __name__ == "__main__":
     # Add the log message handler to the logger
     handler = RotatingFileHandler(LOG_PATH, maxBytes=20*1024*1024, backupCount=4)
 
-    logger.addHandler(handler)
+    # uncomment below to enable log file storage for debugging
+    #logger.addHandler(handler)
 
 
     # where are we now?

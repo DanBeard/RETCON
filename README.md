@@ -34,7 +34,7 @@ For running a RETCON image:
 These are only needed for building a flashable RETCON image
 - Debian 12+
 - 8GB+ of RAM
-- arm64 envorinment or qemu supported emulation of arm64 and armf
+- arm64 environment or qemu supported emulation of arm64 and armf
 
 ### Creating & Deploying a RETCON raspi Image
 

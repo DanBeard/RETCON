@@ -61,6 +61,12 @@ class RetconAdmin:
          p = subprocess.Popen("sudo systemctl status ssh", shell=True, stdout=subprocess.PIPE)
          out, err = p.communicate()
          return b"active (running)" in out
+     
+    @property
+    def rnsh_identity(self):
+         p = subprocess.Popen("rnsh -l -p", shell=True, stdout=subprocess.PIPE)
+         out, err = p.communicate()
+         return out.decode()
     
     @property
     def profile_name(self):
@@ -153,7 +159,7 @@ class RetconAdmin:
         if client is None:
             return f"No client iface named {self.client_iface}"
         
-        active_ap_path =  self.client.active_access_point
+        active_ap_path =  client.active_access_point
         if len(active_ap_path) <3:
             return None
         
@@ -204,10 +210,12 @@ class LXMFAdminConsole:
         if command == "status":
             result = "" 
             current_env = os.environ.copy()
-            result = subprocess.run(['rnstatus'], stdout=subprocess.PIPE, env=current_env)
-            result+= result.stdout.decode()
+            sresult = subprocess.run(['rnstatus'], capture_output=True, env=current_env)
+            result+= sresult.stdout.decode()
             
-            result+= "wifi is connected to: " + self.admin.connected_ap
+            #result+= " wifi is connected to: " + self.admin.connected_ap
+            result+= "\n RNSH STATUS \n" + self.admin.rnsh_identity
+            return result
         else:
             return ("Welcome to the RETCON LXMF admin interface. Possible commands are: \n" +
                             "status")

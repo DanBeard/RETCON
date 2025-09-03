@@ -49,7 +49,6 @@ if __name__ == "__main__":
     # uncomment below to enable log file storage for debugging
     #logger.addHandler(handler)
 
-
     # where are we now?
     dir_path = os.path.dirname(os.path.realpath(__file__)) 
     
@@ -119,6 +118,8 @@ if __name__ == "__main__":
     async def run_admin_interfaces():
         await asyncio.sleep(5) # give some time for wifimesh and other init before loading admin iface
         env_copy = os.environ.copy()
+        
+        # admin interface
         t = subprocess.Popen(["python", f"{dir_path}/utils/admin.py", ssid], env=env_copy)
         rnsd_tasks.append(t)
     
@@ -176,6 +177,15 @@ if __name__ == "__main__":
         logger.info("Starting meshchat")
         MeshchatHandle.start_meshchat(ap_iface, ssid, config)
         await asyncio.sleep(2)
+        
+        
+    async def run_rnsh():
+        await asyncio.sleep(15) # run absolutely last 
+        # rnsh interface
+        logger.info("Starting RNSH")
+        rnsh_admins = r_config.get("rnsh_admins",[])
+        if len(rnsh_admins) > 0 :
+            subprocess.Popen("rnsh -l -b 3600 " + " ".join([f"-a {x}" for x in rnsh_admins]), env=os.environ.copy(), shell=True)
     
     async def run():
         # busy loop so we don't exit
@@ -187,7 +197,7 @@ if __name__ == "__main__":
                 await asyncio.gather(*plugin_loops)
                 await asyncio.sleep(60)
                 
-        tasks = [busy_loop(), run_admin_interfaces()]
+        tasks = [busy_loop(), run_admin_interfaces(), run_rnsh()]
         if is_client:
             tasks.append(run_ui_tasks())
             

@@ -65,6 +65,9 @@ cd ./apps
 #noadmnet is easy-peasy
 pip install nomadnet
 
+#same with rnsh
+pip install rnsh
+
 #meshchat
 git clone https://github.com/liamcottle/reticulum-meshchat.git
 cd reticulum-meshchat

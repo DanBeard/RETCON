@@ -1,4 +1,4 @@
-# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.8
+# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.0.9
 
 Because complex networks shouldn't require complex setup.
 

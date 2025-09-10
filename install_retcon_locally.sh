@@ -88,11 +88,53 @@ else
   echo "You will need to build the frontend remotely and then move it over into $SCRIPTPATH/apps if you want to use meshchat in client mode" 
   prompt_confirm "ok? n will abort install" || exit 0
 fi
-
-
-#python3 meshchat.py --headless --host 0.0.0.0
+#end meshchat
 cd ../
-# end meshchat
+# i2pd support
+#TODO Make this optional? It brings in boost and stuff
+sudo apt-get install libminiupnpc-dev
+git clone https://github.com/PurpleI2P/i2pd.git
+# Known good version. Keep this up to date :)
+git checkout 2.58.0
+cd i2pd/build
+cmake  . 
+make -j4     
+#sudo make install 
+cd ../
+debuild --no-tgz-check -us -uc -b
+cd ../
+sudo dpkg -i i2pd_2.58.0-1_arm64.deb
+#copy systemd service file
+# sudo ln -s /usr/local/bin/i2pd /usr/bin/i2pd
+# sudo mkdir /var/log/i2pd
+# sudo cp i2pd/contrib/i2pd.service /lib/systemd/system/i2pd.service
+# sudo mkdir /etc/i2pd
+# sudo mkdir /run/i2pd
+# sudo mkdir /root/.i2pd
+# sudo cp -R i2pd/contrib/certificates/ /root/.i2pd/
+# sudo cp i2pd/contrib/i2pd.conf /etc/i2pd/
+#end i2p
+
+# yggdrasil support
+# pkg is out of date. Need to build locally which means we need to install golang
+# wget "https://dl.google.com/go/$(curl https://go.dev/VERSION?m=text | head -n1).linux-arm64.tar.gz" -O go.tar.gz
+# sudo tar -C /usr/local -xzf go.tar.gz
+
+# echo 'export GOPATH=$HOME/go' >> ~/.bashrc
+# echo 'export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin' >> ~/.bashrc
+
+# source ~/.bashrc
+
+# git clone https://github.com/yggdrasil-network/yggdrasil-go
+# cd yggdrasil-go
+# GOOS=linux GOOARCH=arm64 ./build
+# sudo cp {yggdrasil,yggdrasilctl} /usr/bin
+# sudo groupadd --system yggdrasil
+# sudo cp contrib/systemd/yggdrasil.service /etc/systemd/system
+# #sudo systemctl daemon-reload
+# sudo systemctl enable yggdrasil
+# sudo yggdrasil -genconf > /etc/yggdrasil.conf
+# end apps
 
 # nodogsplash for captive portal
 # Disabled for now -- we're handling it through just clever DNSmasq rules

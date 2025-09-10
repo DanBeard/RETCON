@@ -63,6 +63,7 @@ mmdebstrap:
     # download all the firware artifacts
     cd /home/$IGconf_device_user1/retcon/utils
     python3 download_firmware.py
+
     EOCHROOT
   
 #  cleanup-hooks:
@@ -74,3 +75,13 @@ mmdebstrap:
     - libmicrohttpd-dev
     - authbind
     - fdisk
+    # i2p reqs
+    - build-essential
+    - debhelper
+    - cmake 
+    - libboost-date-time-dev 
+    - libboost-filesystem-dev 
+    - libboost-program-options-dev
+    - libboost-system-dev 
+    - libssl-dev 
+    - zlib1g-dev

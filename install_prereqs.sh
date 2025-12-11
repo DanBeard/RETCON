@@ -34,7 +34,7 @@ echo Installing python....
 sudo apt update
 sudo apt upgrade -y
 sudo apt install git -y
-sudo apt install python3-pip python3-venv curl git dbus libdbus-glib-1-dev libdbus-1-dev jq -y
+sudo apt install python3-pip python3-venv curl git dbus libdbus-glib-1-dev libdbus-1-dev jq batctl -y
 sudo apt autoremove -y
 
 # deps copied from rpi-image-gen

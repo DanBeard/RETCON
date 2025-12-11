@@ -13,4 +13,4 @@ sys-apps/systemd-net-min
 sys-apps/fake-hwclock
 retcon-essential
 retcon-apps
-wifi-mesh
+batman-mesh

@@ -1,6 +1,6 @@
 export RETCON_USER=$IGconf_device_user1
 
-# modifying network manager rules so retcon user can control without wifi over dbus without sudo
+# modifying network manager rules so retcon user can control wifi over dbus without sudo
 mkdir -p /etc/polkit-1/localauthority/50-local.d
 chown root /etc/polkit-1/localauthority/50-local.d
 
@@ -11,9 +11,14 @@ ResultAny=yes
 ResultInactive=yes
 ResultActive=yes" > /etc/polkit-1/localauthority/50-local.d/10-network-manager.pkla
 
-# create the virtual ap interface udev rule 
-sudo rm /etc/udev/rules.d/90-wireless.rules || true 
+# create the virtual ap interface udev rule (for client device access)
+sudo rm /etc/udev/rules.d/90-wireless.rules || true
 echo 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan0", \
     RUN+="/sbin/iw dev %k interface add uap0 type __ap"
 ' > /etc/udev/rules.d/90-wireless.rules
 
+# ensure batman-adv module loads at boot
+echo "batman-adv" >> /etc/modules
+
+# enable IP forwarding for routing between mesh and client AP
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf

@@ -1,0 +1,31 @@
+---
+name: retcon-batman-mesh
+mmdebstrap:
+  customize-hooks:
+  - cp $IGconf_ext_nsdir/setup-batman-mesh $1/home/$IGconf_device_user1
+  - |-
+    chroot $1 bash -- <<- EOCHROOT
+    source /home/$IGconf_device_user1/setup-batman-mesh
+    touch /home/$IGconf_device_user1/retcon.INSTALLED
+    echo "@reboot $IGconf_device_user1/retcon/start_retcon.sh" > /var/spool/cron/crontabs/$IGconf_device_user1
+    printenv > /home/$IGconf_device_user1/retcon.ENV
+    chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1
+    EOCHROOT
+  packages:
+    - bash
+    - polkitd-pkla
+    - policykit-1
+    - iw
+    - libdbus-glib-1-dev
+    - libdbus-1-dev
+    - dbus
+    - firmware-brcm80211
+    - firmware-atheros
+    - wireless-tools
+    - wireless-regdb
+    - wpasupplicant
+    - dns-root-data
+    - dnsmasq-base
+    # batman-adv packages
+    - batctl
+    - bridge-utils

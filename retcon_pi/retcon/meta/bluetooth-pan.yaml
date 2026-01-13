@@ -1,0 +1,17 @@
+---
+name: retcon-bluetooth-pan
+mmdebstrap:
+  customize-hooks:
+  - cp $IGconf_ext_nsdir/setup-bluetooth-pan $1/home/$IGconf_device_user1
+  - |-
+    chroot $1 bash -- <<- EOCHROOT
+    source /home/$IGconf_device_user1/setup-bluetooth-pan
+    EOCHROOT
+  packages:
+    # Bluetooth core
+    - bluez
+    - bluez-tools
+    - bluetooth
+    # Networking
+    - bridge-utils
+    - dnsmasq-base

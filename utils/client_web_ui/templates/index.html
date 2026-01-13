@@ -40,12 +40,12 @@
       <div class="window-body">
         <img src="{{ url_for('static', filename='images/logo.png') }}" style="width:450px; margin-left:auto; margin-right:auto; display:block;" />
         <center><h3>{{admin.profile_name}}</h3></center>
-        <p class="xlarge"> Please note that any user with access to the client wifi will have access to this page and can make changes to your node!</p>
+        <p class="xlarge"> Please note that any user connected via Bluetooth will have access to this page and can make changes to your node!</p>
 
 
       <menu role="tablist">
         <li role="tab" id="tab-apps" ><a href="#apps" onclick="changeTab('apps')">Applications</a></li>
-        <li role="tab" id="tab-wifi" ><a href="#wifi" onclick="changeTab('wifi')" >Wifi Setup</a></li>
+        <li role="tab" id="tab-bluetooth" ><a href="#bluetooth" onclick="changeTab('bluetooth')" >Bluetooth</a></li>
         <li role="tab" id="tab-files"><a href="#files" onclick="changeTab('files')">Files</a></li>
         <li role="tab" id="tab-advanced"><a href="#advanced" onclick="changeTab('advanced')">Advanced</a></li>
         <li role="tab" id="tab-credits"><a href="#credits" onclick="changeTab('credits')">Credits</a></li>
@@ -53,31 +53,65 @@
 
       <div class="window tab-content"  role="tabpanel" id="content-apps" >
         <div class="window-body">
+          <h3> Mesh Status </h3>
+          <div id="mesh-status" class="field-row" style="margin-bottom: 15px; padding: 10px; border: 1px solid #888;">
+            <span id="mesh-state-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; background-color: gray;"></span>
+            <span class="large"><strong>State:</strong> <span id="mesh-state">Loading...</span></span>
+            <span class="large" style="margin-left: 20px;"><strong>Peers:</strong> <span id="mesh-peers">-</span></span>
+            <span class="large" style="margin-left: 20px;"><strong>IP:</strong> <span id="mesh-ip">-</span></span>
+            <span class="large" style="margin-left: 20px;"><strong>Interface:</strong> <span id="mesh-iface">-</span></span>
+            <button style="margin-left: 20px;" onclick="refreshMeshStatus()">Refresh</button>
+          </div>
+
           <h3> Applications: </h3>
-          <a class="xlarge" href="/" id='meshchatLink' >Reticulum MeshChat</a> <--- Use this to chat and browse 
+          <a class="xlarge" href="/" id='meshchatLink' >Reticulum MeshChat</a> <--- Use this to chat and browse
           <br />
           <br />
           <a class="xlarge" target="_blank" href="/static/rnode-flasher/index.html">Rnode Web Flasher</a> <--- Use this to flash Rnodes (requires chrome :( )
         </div>
       </div>
 
-      <div class="window tab-content" role="tabpanel" id="content-wifi">
+      <div class="window tab-content" role="tabpanel" id="content-bluetooth">
         <div class="window-body">
-          <h3>Client Wifi Setup  </h3>
-          
-            <h5> 
-              This setting controls the ssid and password for the Client hosted AP only (what you're connected to right now)
-            </h5>
-          
-          <div class="field-row">
-            <label class="large" for="wifi_ssid">Wifi SSID</label>
-            <input id="wifi_ssid" type="text" value="{{admin.name}}" />
+          <h3>Bluetooth Connection</h3>
+
+          <div id="bt-status" class="field-row" style="margin-bottom: 15px; padding: 10px; border: 1px solid #888;">
+            <span id="bt-state-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; background-color: gray;"></span>
+            <span class="large"><strong>Status:</strong> <span id="bt-state">Loading...</span></span>
+            <span class="large" style="margin-left: 20px;"><strong>Name:</strong> <span id="bt-name">-</span></span>
+            <span class="large" style="margin-left: 20px;"><strong>Connected:</strong> <span id="bt-connected">-</span></span>
+            <button style="margin-left: 20px;" onclick="refreshBluetoothStatus()">Refresh</button>
           </div>
-          <div class="field-row">
-            <label class="large" for="client_ap_psk">Wifi Pass</label>
-            <input id="client_ap_psk" type="text" value="{{admin.client_ap_psk}}" />
-          </div>
-          <button class="default" onclick="save_wifi()">Save</button>
+
+          <h4>How to Connect</h4>
+          <p class="large">
+            This RETCON node uses <strong>Bluetooth PAN</strong> (Personal Area Network) for connections.
+          </p>
+          <ol class="large">
+            <li>Enable Bluetooth on your phone/tablet</li>
+            <li>Scan for devices and look for "<span id="bt-name-instructions">RETCON-BT</span>"</li>
+            <li>Pair with the device (one-time, no PIN required)</li>
+            <li>Connect to the paired device</li>
+            <li>Open browser and go to <strong>http://192.168.4.1</strong></li>
+          </ol>
+
+          <h4>Using Sideband App</h4>
+          <p class="large">
+            To connect the Sideband app via Bluetooth PAN, add this interface:
+          </p>
+          <pre style="background: #f0f0f0; padding: 10px; font-size: 14px;">
+[[RETCON BT-PAN]]
+  type = TCPClientInterface
+  enabled = yes
+  target_host = 192.168.4.1
+  target_port = 4242</pre>
+
+          <h4>Limitations</h4>
+          <ul class="large">
+            <li><strong>Range:</strong> ~10 meters (Bluetooth Class 2)</li>
+            <li><strong>Max connections:</strong> 7 devices simultaneously</li>
+            <li><strong>Throughput:</strong> ~2-3 Mbps (sufficient for messaging)</li>
+          </ul>
         </div>
       </div>
 
@@ -144,22 +178,46 @@
       const defaultTab = window.location.hash || "apps"
       changeTab(defaultTab);
 
-      // tab functions
-      function save_wifi() {
-        //just PSK for now
-        data = {
-          client_ap_ssid: document.getElementById('wifi_ssid').value || "not set", 
-          client_ap_psk: document.getElementById('client_ap_psk').value || "not set"
-        }
+      // Bluetooth status function
+      function refreshBluetoothStatus() {
+        fetch("/api/bluetooth/status")
+          .then(resp => resp.json())
+          .then(data => {
+            document.getElementById('bt-state').textContent = data.state || 'unknown';
+            document.getElementById('bt-name').textContent = data.bt_name || 'N/A';
+            document.getElementById('bt-connected').textContent = data.connected_devices || '0';
 
-        fetch("/wifi", {method: "POST", body: JSON.stringify(data) })
-        .then((resp)=> resp.json()
-            .then((msg)=> {
-              alert(msg.message);
-              if(msg.status === "ok") window.location.reload();
-            })
-            )
-      };
+            // Update instructions with actual BT name
+            if (data.bt_name) {
+              document.getElementById('bt-name-instructions').textContent = data.bt_name;
+            }
+
+            // Update indicator color based on state
+            const indicator = document.getElementById('bt-state-indicator');
+            switch(data.state) {
+              case 'running':
+                indicator.style.backgroundColor = '#0f0';  // Green
+                break;
+              case 'degraded':
+                indicator.style.backgroundColor = '#ff0';  // Yellow
+                break;
+              case 'failed':
+              case 'error':
+                indicator.style.backgroundColor = '#f00';  // Red
+                break;
+              default:
+                indicator.style.backgroundColor = '#888';  // Gray
+            }
+          })
+          .catch(err => {
+            console.error('Failed to fetch Bluetooth status:', err);
+            document.getElementById('bt-state').textContent = 'Error';
+            document.getElementById('bt-state-indicator').style.backgroundColor = '#f00';
+          });
+      }
+
+      // Fetch Bluetooth status on load
+      refreshBluetoothStatus();
 
       function save_advanced() {
         //just PSK for now
@@ -225,6 +283,44 @@
       }
 
       sync_time();
+
+      // Mesh status functions
+      function refreshMeshStatus() {
+        fetch("/api/mesh/status")
+          .then(resp => resp.json())
+          .then(data => {
+            document.getElementById('mesh-state').textContent = data.state || 'unknown';
+            document.getElementById('mesh-peers').textContent = data.peer_count || '0';
+            document.getElementById('mesh-ip').textContent = data.bat0_ip || 'N/A';
+            document.getElementById('mesh-iface').textContent = data.interface || 'N/A';
+
+            // Update indicator color based on state
+            const indicator = document.getElementById('mesh-state-indicator');
+            switch(data.state) {
+              case 'running':
+                indicator.style.backgroundColor = '#0f0';  // Green
+                break;
+              case 'degraded':
+                indicator.style.backgroundColor = '#ff0';  // Yellow
+                break;
+              case 'failed':
+              case 'error':
+                indicator.style.backgroundColor = '#f00';  // Red
+                break;
+              default:
+                indicator.style.backgroundColor = '#888';  // Gray
+            }
+          })
+          .catch(err => {
+            console.error('Failed to fetch mesh status:', err);
+            document.getElementById('mesh-state').textContent = 'Error';
+            document.getElementById('mesh-state-indicator').style.backgroundColor = '#f00';
+          });
+      }
+
+      // Fetch mesh status on load and every 30 seconds
+      refreshMeshStatus();
+      setInterval(refreshMeshStatus, 30000);
 
       function reset_reticulum_config () {
         fetch("/reset_reticulum_config",  {method: "POST", body: JSON.stringify({do_reset:1}) })

@@ -14,10 +14,11 @@ Note: This is currently alpha dev release. Use at your own risk and please give 
 
 - **One-command image creation**: Create SD card images pre-configured with Reticulum settings
 - **Auto-detection**: Automatically identifies and connects to USB attached RNodes and Meshtastic devices so users don't need to fiddle with config files
-- **WiFi mesh capability**: Forms device-to-device mesh networks using raspi's built-in WiFi chip, no additional hardware required for small distance mesh hops
+- **batman-adv mesh networking**: Forms device-to-device Layer 2 mesh networks using WiFi ad-hoc mode, no additional hardware required ([learn more](docs/MESH_NETWORKING.md))
+- **Bluetooth PAN connectivity**: Phones and tablets connect via Bluetooth Personal Area Network - no WiFi password needed
 - **Dual operation modes**:
-  - **Transport mode**: Headless operation focused solely on extending the mesh network
-  - **Client mode**: Provides user-accessible access point with pre-configured Meshchat app for immediate communication
+  - **Transport mode**: Headless relay operation, WiFi used exclusively for mesh networking
+  - **Client mode**: User access via Bluetooth PAN with Meshchat web UI and Reticulum connectivity
 
 
 ## Getting Started
@@ -69,27 +70,59 @@ Grab your favorite drink and relax because it will take a while. The last line p
 Use `dd` or raspi imager in "custom image" mode to flash the .img file to an sd card.
 
 #### 6. Boot and use
-For devices in client mode:
-1. Connect to the RETCON access point (ssid is defined in the config file)
-2. Open a web browser and navigate to `retcon.local` (or retcon.radio, or anything.retcon)
-3. The Reticulum Meshchat interface will be available for immediate communication
+
+For devices in **client mode**, see the "Connecting to a RETCON Node" section below.
+
+For devices in **transport mode**, the node will automatically join the mesh network and relay traffic.
+
+## Connecting to a RETCON Node (Client Mode)
+
+RETCON nodes in client mode use **Bluetooth PAN** (Personal Area Network) for user connections. This provides full IP networking over Bluetooth - no WiFi password needed!
+
+### Quick Start
+
+1. **Enable Bluetooth** on your phone/tablet
+2. **Scan for devices** - look for the node name (e.g., "RETCON-BT" or configured name)
+3. **Pair** with the device (one-time, no PIN required)
+4. **Connect** to the paired Bluetooth device
+5. **Open browser** and go to `http://192.168.4.1` or `http://retcon.local`
+6. **Meshchat loads!** Start communicating on the mesh network
+
+### Using the Sideband App
+
+You can connect the Sideband Reticulum app to a RETCON node via Bluetooth PAN. Add this interface to your Sideband config:
+
+```
+[[RETCON BT-PAN]]
+  type = TCPClientInterface
+  enabled = yes
+  target_host = 192.168.4.1
+  target_port = 4242
+```
+
+### Bluetooth Limitations
+
+- **Range**: ~10 meters (Bluetooth Class 2)
+- **Max connections**: 7 devices simultaneously (Bluetooth piconet limit)
+- **Throughput**: ~2-3 Mbps (sufficient for messaging)
 
 ## Operation Modes
 
 ### Transport Mode
 
-In Transport mode, RETCON operates headlessly with no access point for end users. This mode is ideal for:
+In Transport mode, RETCON operates headlessly as a mesh relay. This mode is ideal for:
 - Extending the physical range of your mesh network
 - Deploying relay nodes in strategic locations
 
-Transport nodes automatically connect to other RETCON nodes via WiFi when in range and will utilize any attached LoRa hardware for extended communication.
+Transport nodes use WiFi exclusively for batman-adv mesh networking with other RETCON nodes. Bluetooth PAN is disabled. Any attached LoRa hardware (RNode, Meshtastic) will also be utilized.
 
 ### Client Mode
 
 Client mode provides both mesh networking capabilities and end-user access:
-- Creates a separate access point for users to connect
-- Pre-configures Meshchat for immediate communication
-- Maintains mesh connectivity to other RETCON nodes
+- **Bluetooth PAN** for phone/tablet connections (no WiFi password needed)
+- Pre-configured **Meshchat web UI** accessible at `http://192.168.4.1`
+- **Reticulum TCP interface** for Sideband app connectivity
+- Maintains mesh connectivity to other RETCON nodes via batman-adv
 - Automatically bridges communications across the entire network
 
 This mode is meant for user-facing nodes where people can access the mesh network.
@@ -110,18 +143,16 @@ Contributions are welcome and appreciated!
 ### Planned Features
 
 - [x] LXMF based configuration interface
-- [x] Client mode where wifi AP password is different meshchat is launched automatically
-- [x] Web based app in client mode to instruct users how to connect to meshchat and change wifi ap details
-- [x] Captive portal in client mode directing to web app (retcon.local)
-- [x] Set Meshchat default config from RETCON config file. (e.g. default ident name/announce/etc)
+- [x] Client mode with Meshchat web UI
+- [x] Web based app in client mode
+- [x] Set Meshchat default config from RETCON config file
 - [x] Ability to change from client to transport mode via admin interfaces
-- [x] Ability to change from client mode details from admin interface (like AP password)
+- [x] batman-adv Layer 2 mesh networking (replaced WiFi AP mesh)
+- [x] Bluetooth PAN for phone/tablet connectivity (replaced WiFi AP for user access)
 - [ ] Configure rpi-image-gen from retcon config (for things like ssh, username and extra apt packages)
 - [ ] Nomadnet/micron configuration interface for field adjustments
 - [ ] 'microRetcon' for hardware platforms (ESP32, etc.)
-- [ ] Integration with more transports (Bluetooth mesh, additional radio modules)
-- [ ] Better error handling around meshchat crashed
-- [ ] Wifi Mesh 2.0 protocol using raw 802.11 data frames (requires monitor mode. If you know how to do this let me know)
+- [ ] Better error handling around meshchat crashes
 
 
 ### Debugging, Dev and security Tips
@@ -134,28 +165,35 @@ You can change or configure files on teh SD card without booting. All retcon fil
 
 ### Troubleshooting
 
-#### Wifi isn't connecting to the AP I set in wifi.prefix
-Make sure that the wifi frequencies are the same. Raspberry pi hardware can't connect to a network while hosting its own at the same time unless they are the same frequency. If you know the wifi channel, then use the below json object mapping (U.S. Based) to set the proper freqency:
+#### Can't find the RETCON node in Bluetooth scan
+- Make sure the node is in **client mode** (transport mode disables Bluetooth PAN)
+- The Bluetooth name defaults to the WiFi prefix + "-BT" (e.g., "RT-DEFAULT-BT")
+- Ensure Bluetooth is enabled on your phone/tablet
+- You may need to be within ~10 meters of the node
 
+#### Can't access web UI after Bluetooth connection
+- Make sure you're connected (not just paired) to the Bluetooth device
+- Your device should get an IP address in the 192.168.4.x range via DHCP
+- Try accessing `http://192.168.4.1` directly instead of `retcon.local`
+
+#### Mesh nodes not seeing each other
+All RETCON nodes must use the same WiFi configuration to mesh together:
+- Same `prefix` (ESSID prefix for mesh network)
+- Same `psk` (password)
+- Same `freq` (WiFi frequency/channel)
+
+For a deep dive on how the mesh works, see [docs/MESH_NETWORKING.md](docs/MESH_NETWORKING.md).
+
+WiFi channel to frequency mapping (2.4 GHz):
 ```
 wifi_channel_to_freq = {
-    1: 2412,
-    2: 2417,
-    3: 2422,
-    4: 2427,
-    5: 2432,
-    6: 2437,
-    7: 2442,
-    8: 2447,
-    9: 2452,
-    10: 2457,
-    11: 2462,
-    12: 2467,
-    13: 2472,
-    14: 2484
+    1: 2412,  6: 2437,  11: 2462,
+    2: 2417,  7: 2442,  12: 2467,
+    3: 2422,  8: 2447,  13: 2472,
+    4: 2427,  9: 2452,  14: 2484,
+    5: 2432,  10: 2457
 }
-```
-Note. Only 2.4 Ghz wifi is supported for now. 
+``` 
 
 ## License
 

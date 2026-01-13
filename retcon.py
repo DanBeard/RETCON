@@ -59,59 +59,31 @@ if __name__ == "__main__":
     config = get_recton_config(profile)
     r_config = config["retcon"]
     
-    # startup the ap, this is the same  whether we're a transport or client
-
     # are we just a transport? or should we launch ui?
     is_transport = r_config.get("mode", "client") == "transport"
     is_client = r_config.get("mode", "client") == "client"
-    
+
     wifi_config = r_config["wifi"]
-    
+
     if "prefix" not in wifi_config or "psk" not in wifi_config or "freq" not in wifi_config:
         logger.info("ERROR!  'prefix', 'psk', and freq are required in [[wifi]] section of config")
         exit()
-        
-    client_iface = wifi_config["client_iface"]
-    ap_iface = wifi_config["ap_iface"]
-    node_id = uuid.getnode() 
-    
-    if is_client:
-        ssid = wifi_config.get("client_ap_prefix", wifi_config["prefix"]) + a85encode(node_id.to_bytes(6, signed=False)).decode()
-        psk = wifi_config.get("client_ap_psk", wifi_config["psk"])
-    else:
-        ssid = wifi_config["prefix"] + a85encode(node_id.to_bytes(6, signed=False)).decode()
-        psk = wifi_config['psk']
-        
-    channel = wifi_freq_to_channel[int(wifi_config["freq"])]
-    if is_transport:
-        # we can't have collisions so use the las bits of the node_id to generate an ipv4 subnet range 
-        ip_subnet_bytes = (node_id  & 0xFFFF).to_bytes(2)
-        # avoid collisions with client AP. That will girnd things to a hault for them
-        if ip_subnet_bytes[0] == 42 and ip_subnet_bytes[1] == 1:
-            ip_subnet_bytes = [42,2]
-        ip_subnet_str = f"10.{ip_subnet_bytes[0]}.{ip_subnet_bytes[1]}.1/24"
-    else:
-        ip_subnet_str ="10.42.0.1/24" # need these to always be the same for DNS to work and this is the default
-    
-    
-    # TODO: We should really use dbus directly for this, but nmcli is so much easier
-    # Setup wifi interfaces
-    commands = [
-        "nmcli connection delete preconfigured", # bring down and connection that user preconfiged to setup retcon
-        "nmcli connection delete RETCON_WIFI_MESH",
-        "nmcli connection delete retcon_ap",
-        f"nmcli con add con-name retcon_ap ifname {ap_iface} type wifi ssid '{ssid}'",
-        f"nmcli con modify retcon_ap wifi-sec.key-mgmt wpa-psk",
-        f"nmcli con modify retcon_ap wifi-sec.psk '{psk}' ",
-        f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared ipv4.addresses {ip_subnet_str}"
+
+    # Generate node identifier from prefix + unique node ID
+    # This is used for naming (admin interface, meshchat identity, etc.)
+    node_id = uuid.getnode()
+    ssid = wifi_config["prefix"] + a85encode(node_id.to_bytes(6, signed=False)).decode()
+
+    # Clean up any legacy WiFi AP connections
+    cleanup_commands = [
+        "nmcli connection delete preconfigured 2>/dev/null || true",
+        "nmcli connection delete RETCON_WIFI_MESH 2>/dev/null || true",
+        "nmcli connection delete retcon_ap 2>/dev/null || true",
     ]
-    for command in commands:
-        logger.info(command)
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-        process.wait()
-    
-    logger.info("Brought up AP now letting it settle")
-    time.sleep(10)
+    for command in cleanup_commands:
+        subprocess.run(command, shell=True, capture_output=True)
+
+    logger.info("Cleaned up legacy connections, initializing plugins...")
     
     rnsd_tasks=[]
     
@@ -174,8 +146,9 @@ if __name__ == "__main__":
     # these wont be run if we're in transport mode
     async def run_ui_tasks():
         await asyncio.sleep(3) # sleep for a few seconds to allow server to settle
-        logger.info("Starting meshchat")
-        MeshchatHandle.start_meshchat(ap_iface, ssid, config)
+        logger.info("Starting meshchat on Bluetooth PAN interface")
+        # Use pan0 (Bluetooth PAN) interface for client UI access
+        MeshchatHandle.start_meshchat("pan0", ssid, config)
         await asyncio.sleep(2)
         
         

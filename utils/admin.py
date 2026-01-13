@@ -88,37 +88,7 @@ class RetconAdmin:
     def password(self):
         """A Passowrd to authenticate a user as an admin over an admin interface like LXMF or html"""
         return self.config['retcon'].get("password", None)
-    
-    @property
-    def client_ap_psk(self):
-        print(self.config["retcon"]['wifi'])
-        return self.config["retcon"]['wifi'].get('client_ap_psk',"")
-    
-    @client_ap_psk.setter
-    def client_ap_psk(self, psk):
-        self.config["retcon"]['wifi']['client_ap_psk'] = psk
-        self.config["retcon"]['client_info_changed'] = True
-        self.write_config()
-        
-    @property
-    def client_ap_ssid(self):
-        print(self.config["retcon"]['wifi'])
-        return self.config["retcon"]['wifi'].get('client_ap_prefix',"")
-    
-    @client_ap_ssid.setter
-    def client_ap_ssid(self, ssid):
-        self.config["retcon"]['wifi']['client_ap_prefix'] = ssid
-        self.config["retcon"]['client_info_changed'] = True
-        self.write_config()
-        
-    @property
-    def client_info_changed(self):
-        """
-        Flag that indicates the client config has been changed by a user.
-        Useful to know if we need to show Wizards or tips during setup
-        """
-        self.config["retcon"].get('client_info_changed', False)
-    
+
     @property
     def is_transport(self):
         return self.config['retcon'].get("mode", "ui") == "transport"

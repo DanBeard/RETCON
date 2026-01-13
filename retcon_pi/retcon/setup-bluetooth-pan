@@ -1,0 +1,75 @@
+export RETCON_USER=$IGconf_device_user1
+
+# Configure Bluetooth for PAN (Personal Area Network)
+
+# Enable Bluetooth service
+systemctl enable bluetooth
+
+# Create systemd-networkd configuration for pan0 bridge
+mkdir -p /etc/systemd/network
+
+# pan0 netdev - bridge for Bluetooth connections
+cat > /etc/systemd/network/pan0.netdev << 'EOF'
+[NetDev]
+Name=pan0
+Kind=bridge
+EOF
+
+# pan0 network - DHCP server for connected devices
+cat > /etc/systemd/network/pan0.network << 'EOF'
+[Match]
+Name=pan0
+
+[Network]
+Address=192.168.4.1/24
+DHCPServer=yes
+
+[DHCPServer]
+PoolOffset=10
+PoolSize=50
+DNS=192.168.4.1
+EOF
+
+# Create bt-network systemd service for NAP
+cat > /etc/systemd/system/bt-network.service << 'EOF'
+[Unit]
+Description=Bluetooth Network Access Point
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bt-network -s nap pan0
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Configure Bluetooth main.conf for discoverability
+mkdir -p /etc/bluetooth
+if [ -f /etc/bluetooth/main.conf ]; then
+    # Modify existing config
+    sed -i 's/^#*DiscoverableTimeout.*/DiscoverableTimeout = 0/' /etc/bluetooth/main.conf
+    sed -i 's/^#*PairableTimeout.*/PairableTimeout = 0/' /etc/bluetooth/main.conf
+else
+    # Create new config
+    cat > /etc/bluetooth/main.conf << 'EOF'
+[General]
+DiscoverableTimeout = 0
+PairableTimeout = 0
+
+[Policy]
+AutoEnable=true
+EOF
+fi
+
+# Enable systemd-networkd for pan0 management
+systemctl enable systemd-networkd
+
+# Enable bt-network service
+systemctl enable bt-network
+
+# Enable IP forwarding for routing between BT-PAN and other interfaces
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf

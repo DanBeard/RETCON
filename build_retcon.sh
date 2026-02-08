@@ -59,8 +59,10 @@ mkdir $HOME/.retcon-build
 
 cd $HOME/.retcon-build
 git clone https://github.com/raspberrypi/rpi-image-gen.git
-
 cd rpi-image-gen
+
+# Checkout to a known good release tag. Make sure to keep this up to date :)
+git checkout v1.0.0
 
 # deps should already have been installed in ./install_prereqs
 # Do the build

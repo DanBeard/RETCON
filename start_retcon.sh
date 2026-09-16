@@ -13,7 +13,11 @@ source ./venv/bin/activate
 source $HOME/.nvm/nvm.sh
 nvm use default
 
-
+# crns shared library for the python binding (admin.py also self-resolves
+# via crns_lib/; exporting here makes it explicit for child processes)
+if [ -z "${CRNS_LIBRARY:-}" ] && [ -d ./crns_lib ]; then
+  export CRNS_LIBRARY=$(ls ./crns_lib/libcrns.so* | sort -V | tail -1)
+fi
 
 python retcon.py
 

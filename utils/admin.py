@@ -1,116 +1,139 @@
 """
-RETCON administration utility
+RETCON administration utility — crns edition.
+
+Speaks LXMF over the crns C++ reticulum stack via its python binding
+(libcrns.so). The crns host owns the mesh interfaces declared in
+~/.reticulum/config (same rnsd config format python rns uses); this console
+is the application layer on top: an lxmf.delivery destination that receives
+operator commands and replies.
+
+meant to be run from main as a subprocess, not imported:
+    python utils/admin.py <admin_name>
+
+Requires: the crns python package on PYTHONPATH (vendored to
+./python_packages/crns by install_retcon_locally.sh) and CRNS_LIBRARY
+pointing at libcrns.so.
 """
 import os
+import sys
 import asyncio
-import RNS
-from io import StringIO, BytesIO
 import time
-from LXMF import LXMessage, LXMRouter
 import subprocess
-from rns_config_gen import get_recton_config
-from configobj import ConfigObj
-import sdbus
-from sdbus_block.networkmanager import (
-    NetworkManager,
-    NetworkDeviceWireless,
-    NetworkManagerSettings,
-    AccessPoint,
+import msgpack
+
+# where the crns python package + libcrns.so were vendored by the installer.
+# Paths must be set up before `from crns import ...` below.
+UTILS_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_ROOT = os.path.dirname(UTILS_DIR)
+CRNS_LIB_DIR = os.path.join(REPO_ROOT, "crns_lib")
+sys.path.insert(0, os.path.join(REPO_ROOT, "python_packages"))
+
+if CRNS_LIB_DIR not in os.environ.get("CRNS_LIBRARY", ""):
+    libs = sorted(os.listdir(CRNS_LIB_DIR)) if os.path.isdir(CRNS_LIB_DIR) else []
+    if libs:
+        os.environ["CRNS_LIBRARY"] = os.path.join(CRNS_LIB_DIR, libs[0])
+
+from crns import (
+    Reticulum,
+    AnnounceHandler,
+    Identity,
+    Destination,
 )
 
+from rns_config_gen import get_recton_config
 
-# meant to be run from main as a sort of root rnsd, don't import me
-dir_path = os.path.dirname(os.path.realpath(__file__)) + "/.."
+# LXMF announce app_data peer_data shape (LXMF/LXMRouter.py:get_announce_app_data):
+#   [display_name_or_None, stamp_cost_or_None, [SF_COMPRESSION]]
+SF_COMPRESSION = 0x00
+
+
+def pack_display_name_app_data(display_name: str) -> bytes:
+    """Pack the LXMF peer_data announce app_data so python clients see our
+    display name in announces (what meshchat/nomadnet parse)."""
+    return msgpack.packb([display_name, None, [SF_COMPRESSION]], use_bin_type=True)
+
 
 class RetconAdmin:
-    """ The actual admin functionality"""
-    
+    """ The actual admin functionality (config + OS level)"""
+
     def __init__(self, name):
         self.config = get_recton_config(None) # always the active profile
         self.name = name
-        
+
     # write the config to the active profile
     def write_config(self):
-        profile_path = dir_path + "/retcon_profiles/active"
+        profile_path = os.path.join(REPO_ROOT, "retcon_profiles", "active")
         with open(profile_path, 'wb') as fout:
             self.config.write(fout)
-       
+
     def reboot(self):
         # trigger the shutdown
         subprocess.Popen(f"sleep 3; sudo reboot",shell=True)
-        
+
     def toggle_ssh(self):
         status = self.ssh_enabled
-        
+
         # toggle it off or on
         if status:
             subprocess.Popen(f"sudo systemctl stop ssh", shell=True)
         else:
             subprocess.Popen(f"sudo systemctl start ssh", shell=True)
-            
+
     def set_time(self, epoch):
         p = subprocess.Popen(f"sudo date -s '@{epoch}'", shell=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         return out
-            
+
     def reset_reticulum_config(self):
         subprocess.Popen(f"cd ~/.reticulum && rm -rf `ls ~/.reticulum | grep -v interfaces`", shell=True)
-    
+
     @property
     def ssh_enabled(self):
          p = subprocess.Popen("sudo systemctl status ssh", shell=True, stdout=subprocess.PIPE)
          out, err = p.communicate()
          return b"active (running)" in out
-     
-    @property
-    def rnsh_identity(self):
-         p = subprocess.Popen("rnsh -l -p", shell=True, stdout=subprocess.PIPE)
-         out, err = p.communicate()
-         return out.decode()
-    
+
     @property
     def profile_name(self):
         return self.config['retcon'].get("name", "no name")
-    
+
     @property
     def announce_every(self):
         return float(self.config['retcon'].get("announce_every", 10*60)) #announce every 10 mins
-        
+
     @property
     def admins(self):
         return self.config['retcon'].get("admins","").split(",")
-    
+
     @property
     def client_iface(self):
         return self.config['retcon']["wifi"].get("client_iface", None)
-    
+
     @property
     def password(self):
         """A Passowrd to authenticate a user as an admin over an admin interface like LXMF or html"""
         return self.config['retcon'].get("password", None)
-    
+
     @property
     def client_ap_psk(self):
-        print(self.config["retcon"]['wifi'])
         return self.config["retcon"]['wifi'].get('client_ap_psk',"")
-    
+
     @client_ap_psk.setter
     def client_ap_psk(self, psk):
         self.config["retcon"]['wifi']['client_ap_psk'] = psk
         self.config["retcon"]['client_info_changed'] = True
         self.write_config()
-        
+
     @property
     def client_ap_ssid(self):
-        print(self.config["retcon"]['wifi'])
         return self.config["retcon"]['wifi'].get('client_ap_prefix',"")
-    
+
     @client_ap_ssid.setter
     def client_ap_ssid(self, ssid):
         self.config["retcon"]['wifi']['client_ap_prefix'] = ssid
         self.config["retcon"]['client_info_changed'] = True
         self.write_config()
-        
+
     @property
     def client_info_changed(self):
         """
@@ -118,160 +141,149 @@ class RetconAdmin:
         Useful to know if we need to show Wizards or tips during setup
         """
         self.config["retcon"].get('client_info_changed', False)
-    
+
     @property
     def is_transport(self):
         return self.config['retcon'].get("mode", "ui") == "transport"
-    
+
     @property
     def config_str(self):
-        with BytesIO() as result:
-            self.config.write(outfile=result)
-            return result.getvalue().decode()
-        
+        with open(os.devnull, "wb") as sink:
+            self.config.write(sink)
+        # configobj writes to a file object; render through a temp file to
+        # keep this free of third-party stream wrappers
+        import io
+        buf = io.BytesIO()
+        self.config.write(buf)
+        return buf.getvalue().decode()
+
     @config_str.setter
     def config_str(self, value:str):
-        with BytesIO(initial_bytes=value.encode()) as fin:
-            new_config = ConfigObj(fin, interpolation=False)
-            self.config = new_config
-            self.write_config()
-        
+        import io
+        new_config = None
+        buf = io.BytesIO(value.encode())
+        # lazy import keeps ConfigObj usage identical to the python-rns era
+        from configobj import ConfigObj
+        new_config = ConfigObj(buf, interpolation=False)
+        self.config = new_config
+        self.write_config()
+
     def is_admin(self, user_id, password):
         return user_id in self.admins or (self.password is not None and password == self.password)
-    
+
     @property
     def connected_ap(self):
-        """ What AP are we connected to?"""
-        sdbus.set_default_bus(sdbus.sd_bus_open_system()) 
-        nm = NetworkManager()
-        client = None
-        devices_paths = nm.get_devices()
-        for device_path in devices_paths:
-            generic_device = NetworkDeviceWireless(device_path)
-            name = generic_device.interface
-            
-            if name == self.client_iface:
-                client = generic_device
-                print('Client : ',  generic_device.interface)
-            else:
-                print('       : ',  generic_device.interface)
-                
-        if client is None:
-            return f"No client iface named {self.client_iface}"
-        
-        active_ap_path =  client.active_access_point
-        if len(active_ap_path) <3:
+        """ What AP are we connected to? (best-effort via nmcli)"""
+        try:
+            out = subprocess.run(
+                ["nmcli", "-t", "-f", "NAME,DEVICE,STATE", "con", "show", "--active"],
+                capture_output=True, text=True, timeout=5
+            ).stdout
+            for line in out.splitlines():
+                parts = line.split(":")
+                if len(parts) >= 3 and "wlan" in parts[1]:
+                    return parts[0]
             return None
-        
-        return AccessPoint(active_ap_path)
-        
-    
+        except Exception:
+            return None
 
-class LXMFAdminConsole:                  
-    
+
+class LXMFAdminConsole:
+    """
+    The RETCON admin console over LXMF, backed by crns.
+
+    Owns the crns Reticulum host (the loop thread lives in libcrns_host).
+    Registers the lxmf.delivery destination, announces with the node's
+    display name, receives admin commands, and replies opportunistically.
+    """
+
     def __init__(self, admin: RetconAdmin):
-        base_storage_dir = os.path.join(dir_path, "storage")
         self.admin = admin
-        self.r = RNS.Reticulum()
-        self.router = LXMRouter(storagepath=base_storage_dir)
-        self.router.register_delivery_callback(self.on_rns_recv)
-        self._announce_interval = 2
-        
-         # ensure provided storage dir exists, or the default storage dir exists
-        
-        os.makedirs(base_storage_dir, exist_ok=True)
-
-        # configure path to default identity file
-        default_identity_file = os.path.join(dir_path, "identity")
-
-        # if default identity file does not exist, generate a new identity and save it
-        if not os.path.exists(default_identity_file):
-            identity = RNS.Identity(create_keys=True)
-            with open(default_identity_file, "wb") as file:
-                file.write(identity.get_private_key())
-            print("Reticulum Identity <{}> has been randomly generated and saved to {}.".format(identity.hash.hex(), default_identity_file))
-
-        # default identity file exists, load it
-        identity = RNS.Identity(create_keys=False)
-        identity.load(default_identity_file)
-        print("Reticulum Identity <{}> has been loaded from file {}.".format(identity.hash.hex(), default_identity_file))
-        
-        self.ident = identity
-        self.source = self.router.register_delivery_identity(self.ident, display_name=self.admin.name)
-        self.router.announce(self.source.hash)
-        self._msg_queue = []
         self._response_queue = []
-        
-        
+        self._announced_peers = {}
+        self._identity_path = os.path.expanduser("~/retcon/storage/identity")
+
+        os.makedirs(os.path.dirname(self._identity_path), exist_ok=True)
+
+        # Bring the crns host up on the standard config dir. This parses the
+        # same ~/.reticulum/config python rns used, and owns the interfaces.
+        self.r = Reticulum("~/.reticulum")
+        self.dest = self.r.register_destination(
+            "lxmf.delivery", identity_file=self._identity_path
+        )
+        self.r.set_inbound_handler(self.on_lxmf_recv, destination=self.dest)
+        self.r.register_announce_handler(self)
+        # the loop thread must be running before any traffic flows
+        self.r.start()
+
+    # -- announce feed ---------------------------------------------------
+
+    def received_announce(self, announce):
+        """Track heard LXMF peers so replies know when a path is fresh."""
+        self._announced_peers[announce.destination_hash] = time.time()
+
+    # -- command handling --------------------------------------------------
+
     def process_command(self, message:bytes):
-        command, *args = message.decode().strip().split(" ", 1)
+        command, *rest = message.decode(errors="replace").strip().split(" ", 1)
+        args = rest[0] if rest else ""
         command = command.lower()
-        
+
         if command == "status":
-            result = "" 
-            current_env = os.environ.copy()
-            sresult = subprocess.run(['rnstatus'], capture_output=True, env=current_env)
-            result+= sresult.stdout.decode()
-            
-            #result+= " wifi is connected to: " + self.admin.connected_ap
-            result+= "\n RNSH STATUS \n" + self.admin.rnsh_identity
+            result = ""
+            # crnsd doesn't ship a probe responder yet; report what the
+            # binding can see: our identity, known paths, announce count.
+            try:
+                ident_hash = self.r.identity_hash().hex()
+            except Exception:
+                ident_hash = "?"
+            result += f"node identity: {ident_hash}\n"
+            result += f"destinations: {len(self.r._registered)}\n"
+            result += f"heard announces: {len(self._announced_peers)}\n"
+            result += "rnsh is not available on the crns transport; use this console"
             return result
         else:
-            return ("Welcome to the RETCON LXMF admin interface. Possible commands are: \n" +
+            return ("Welcome to the RETCON LXMF admin interface. Possible commands are: \n"
                             "status")
-        
-                    
-    def on_rns_recv(self, message : LXMessage):        
-        # DO STUFF WITH MESSAGE HERE
+
+    def on_lxmf_recv(self, message):
         reply_hash = message.source_hash
         response = self.process_command(message.content)
-        RNS.Transport.request_path(reply_hash)
         self._response_queue.append((reply_hash, response))
-           
-            
+
+    # -- main loop ----------------------------------------------------------
+
     async def loop(self):
-        last_announce = 0 # never announced
-        
+        # Announce immediately, then on the configured cadence.
+        last_announce = 0.0
+        app_data = pack_display_name_app_data(self.admin.name)
+
         while True:
-            self._msg_queue = []
-                  
-            # help queue for responding with help to messages
             r_q = self._response_queue
             self._response_queue = []
             for reply_hash, text in r_q:
-                dest_id = RNS.Identity.recall(reply_hash)
-                if dest_id is not None and RNS.Transport.has_path(reply_hash):
-                    destination = RNS.Destination(dest_id, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
-                    lxm = LXMessage(destination, self.source,
-                                    text,
-                                    "RETCON console",
-                                    desired_method=LXMessage.OPPORTUNISTIC)
-            
-                    self.router.handle_outbound(lxm)
-                    print(" -> " + str(text))
+                if self.r.has_path(reply_hash):
+                    try:
+                        self.r.send(reply_hash, text.encode(), title=b"RETCON console")
+                    except Exception as e:
+                        print("send failed:", e)
                 else:
-                    RNS.Transport.request_path(reply_hash)
+                    self.r.request_path(reply_hash)
                     self._response_queue.append((reply_hash, text))
-                    
+
             # announce when it's time
             now = time.time()
-            if now - last_announce > self._announce_interval:
+            if now - last_announce > self.admin.announce_every:
                 print("announcing again!")
-                self.router.announce(self.source.hash)
+                self.r.announce(self.dest, app_data=app_data)
                 last_announce = now
-                # double the announce interval until we hit the desired max. This means way MORE announces on startup 
-                # before leveling off as qw're been around longer
-                self._announce_interval = min(self.admin.announce_every, self._announce_interval * 2)
-                
-            #print(os.getppid())
+
             await asyncio.sleep(2)
-                    
-    
-    
+
+
 if __name__ == "__main__":
-    import sys
     name = sys.argv[1]
     admin = RetconAdmin(name)
     lxmf_admin = LXMFAdminConsole(admin)
-    
+
     asyncio.run(lxmf_admin.loop())

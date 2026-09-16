@@ -6,6 +6,8 @@ Because complex networks shouldn't require complex setup.
 
 RETCON is a streamlined, deployment-focused solution for Reticulum mesh networking.  While Reticulum provides powerful customization options, RETCON packages these capabilities into a solution that is ready-to-deploy en masse.
 
+The on-node mesh transport runs on [crns](docs/CRNS-INTEGRATION.md) — a resource-conscious C++20 Reticulum implementation — with the familiar `~/.reticulum` config format and python-RNS-wire-compatible interfaces. On-device apps (meshchat, nomadnet) still speak python rns and join the mesh over a loopback interface; see the integration notes for the architecture.
+
 RETCON enables quick creation of pre-configured Raspberry Pi images that automatically form resilient mesh networks once deployed. It is designed for scenarios where rapid consistent deployment matters more than configuration flexibility - e.g. conferences, maker camps, community events, emergency response situations, and other environments where you need reliable communication infrastructure quickly.
 
 Note: This is currently alpha dev release. Use at your own risk and please give feedback on improvements or potenial PRs!

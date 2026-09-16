@@ -61,6 +61,56 @@ pip install --only-binary ':all:' sdbus-networkmanager
 echo installing python requirements
 pip install -r requirements.txt
 
+# ---- crns: the C++ reticulum transport + host ----
+# RETCON runs its mesh over crns (crnsd-compatible C++ stack, wire-compatible
+# with python rns). The transport owns the interfaces from ~/.reticulum/config;
+# the admin console drives it through the crns python binding; meshchat (still
+# python rns) joins over a loopback TCP interface. The branch carries the
+# rnsd-config compat keys (device/port/listen_on) + RNodeInterface support that
+# RETCON's generated configs need.
+#
+# Source resolution order:
+#   1. $CRNS_LOCAL_DIR   — an existing checkout (image builds stage one)
+#   2. $SCRIPTPATH/crns  — a checkout staged next to the repo
+#   3. clone $CRNS_REPO at $CRNS_REF (dev hosts with ssh access)
+crns_repo=${CRNS_REPO:-ssh://git@192.168.0.2:2222/dbeard/crns.git}
+crns_ref=${CRNS_REF:-retcon/posix-build-fixes}
+mkdir -p apps
+if [ -n "${CRNS_LOCAL_DIR:-}" ] && [ -d "$CRNS_LOCAL_DIR" ]; then
+  echo "using local crns checkout: $CRNS_LOCAL_DIR"
+  cp -r "$CRNS_LOCAL_DIR" apps/crns
+elif [ -d "$SCRIPTPATH/crns" ]; then
+  echo "using staged crns checkout: $SCRIPTPATH/crns"
+  cp -r "$SCRIPTPATH/crns" apps/crns
+else
+  echo "building crns from $crns_repo ($crns_ref)"
+  git clone "$crns_repo" apps/crns
+  (cd apps/crns && git checkout "$crns_ref")
+fi
+cd apps/crns
+git submodule update --init --recursive 2>/dev/null || true
+cmake -S . -B build -DCRNS_BUILD_SHARED=ON -DCRNS_WITH_BEARSSL=ON
+cmake --build build -j$(nproc)
+mkdir -p ../../crns_lib
+cp -a build/libcrns.so* ../../crns_lib/
+cd ../../
+# python binding: pure python + cffi; expects libcrns.so next to it or $CRNS_LIBRARY
+pip install cffi
+mkdir -p python_packages
+cp -a apps/crns/python/crns ./python_packages/crns
+# install the binding into the venv so `import crns` works everywhere,
+# and stage the library next to it (the binding dlopens
+# site-packages/crns/_lib/libcrns.so* when CRNS_LIBRARY is unset)
+SP=$(python -c "import site; print(site.getsitepackages()[0])")
+rm -rf "$SP/crns"
+cp -a apps/crns/python/crns "$SP/crns"
+mkdir -p "$SP/crns/_lib"
+cp -a crns_lib/libcrns.so* "$SP/crns/_lib/"
+export CRNS_LIBRARY=$SCRIPTPATH/crns_lib/$(ls crns_lib | grep 'libcrns.so' | head -1)
+echo "CRNS_LIBRARY=$CRNS_LIBRARY"
+python -c "import crns; print('crns python binding OK, abi', crns.abi_version())"
+# ---- end crns ----
+
 # install web-apps
 cd utils/client_web_ui/static
 #rnode web flasher
@@ -187,6 +237,30 @@ ln -s  "$SCRIPTPATH/apps/interfaces" $HOME/.reticulum/interfaces
 # installs /etc/cron.d/retcon-start instead, so that's not an error.
 echo "@reboot $SCRIPTPATH/start_retcon.sh &> /dev/null" | crontab -u $USER - 2>/dev/null || \
     echo "INFO: skipping user crontab (managed by /etc/cron.d/retcon-start in the image build)"
+
+# meshchat's own reticulum config dir: meshchat (still python rns) cannot
+# share the crns host's sockets, so it joins the mesh through the crns
+# host's loopback TCP listener (127.0.0.1:4243, HDLC framing).
+mkdir -p $HOME/.meshchat-rns
+cat > $HOME/.meshchat-rns/config <<EOMC
+[reticulum]
+
+  enable_transport = no
+  # join the crns host over loopback directly; never look for a python-rns
+  # shared instance on this machine (crns owns the mesh, not rnsd)
+  share_instance = no
+
+[logging]
+  loglevel = 4
+
+[interfaces]
+
+  [[crns Host Loopback]]
+    type = TCPClientInterface
+    interface_enabled = true
+    target_host = 127.0.0.1
+    target_port = 4243
+EOMC
 
 echo Done. Please reboot to see changes. 
 echo hint: you can reboot with sudo reboot now

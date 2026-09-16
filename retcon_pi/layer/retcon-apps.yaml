@@ -21,6 +21,7 @@ mmdebstrap:
     - build-essential
     - libffi-dev
     - git
+    - cmake  # crns build
     # wifi mesh / virtual AP support
     - iw
     - wireless-tools

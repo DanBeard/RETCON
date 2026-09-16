@@ -42,6 +42,20 @@ tcp_server_iface_template = """
   
   """
   
+# Dedicated loopback server so the on-device meshchat (python rns, separate
+# process) can join the crns mesh over 127.0.0.1. crns has no shared-instance
+# IPC, so a second process reaches the mesh through this TCP listener.
+loopback_server_iface_template = """
+  [[Loopback Meshchat Interface]]
+  type = BackboneInterface
+  enabled = yes
+  mode= full
+  listen_ip = 127.0.0.1
+  listen_port = 4243
+  name = retcon_loopback_server
+  
+  """
+  
 tcp_client_iface_template = """
   [[WifiMesh Client Interface]]
   type = BackboneInterface
@@ -72,6 +86,10 @@ class WifiMeshPlugin(RetconPlugin):
         # tcp interfaces
         interface_str =  Template(tcp_client_iface_template).render(iface=wifi['client_iface'], mode="full")
         interface_str += Template(tcp_server_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
+        # loopback listener for the on-device meshchat (crns swap: the crns
+        # host owns the real interfaces; meshchat is a separate python rns
+        # process that joins over TCP loopback)
+        interface_str += Template(loopback_server_iface_template).render()
         return {
             "plugin_interfaces" : interface_str
         }

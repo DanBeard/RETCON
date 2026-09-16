@@ -180,12 +180,13 @@ if __name__ == "__main__":
         
         
     async def run_rnsh():
-        await asyncio.sleep(15) # run absolutely last 
-        # rnsh interface
-        logger.info("Starting RNSH")
+        # rnsh is a python-rns in-process shell and is not available on the
+        # crns transport (no probe responder yet). The LXMF admin console's
+        # `status` command covers remote administration; keep the config key
+        # so profiles don't change meaning, and note it in the log.
         rnsh_admins = r_config.get("rnsh_admins",[])
         if len(rnsh_admins) > 0 :
-            subprocess.Popen("rnsh -l -b 3600 " + " ".join([f"-a {x}" for x in rnsh_admins]), env=os.environ.copy(), shell=True)
+            logger.info("rnsh_admins configured but rnsh is unavailable on crns; use the LXMF admin console")
     
     async def run():
         # busy loop so we don't exit

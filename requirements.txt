@@ -30,6 +30,7 @@ Jinja2==3.1.6
 lxmf==1.1.1
 MarkupSafe==3.0.3
 meshtastic==2.7.11
+msgpack==1.2.2  # LXMF announce peer_data packing for the crns admin console
 multidict==6.8.0
 netifaces==0.11.0
 nomadnet==1.4.3

@@ -1,0 +1,20 @@
+# METABEGIN
+# X-Env-Layer-Name: retcon-suite
+# X-Env-Layer-Category: suite
+# X-Env-Layer-Desc: RETCON appliance layer. Debian Trixie arm64 with
+#  NetworkManager managed wifi (the RETCON wifi mesh is driven over dbus by
+#  the retcon python service), plus all RETCON python service dependencies.
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: debian-trixie-arm64-multi,
+#  rpi-debian-trixie,
+#  rpi-misc-utils,
+#  rpi-essential-base,
+#  rpi-misc-skel,
+#  network-manager-iwd,
+#  wireless-regulatory,
+#  openssh-server,
+#  systemd-timesyncd,
+#  locale-base,
+#  retcon-apps
+# METAEND
+---

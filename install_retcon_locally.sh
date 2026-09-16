@@ -16,6 +16,10 @@ SCRIPT=$(realpath "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 cd $SCRIPTPATH
 
+# hard-fail on errors. A silently half-installed RETCON is worse than a
+# failed install, especially during image builds.
+set -e
+
 
 if [ "$1" != "-y" ]; then
 echo ""
@@ -30,11 +34,18 @@ fi
 # install nvm
 echo "insalling nvm and npm"
 # much curl, so secure
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
 source $HOME/.nvm/nvm.sh
 source $HOME/.bashrc
 nvm install --lts
 nvm use --lts
+
+# python venv needs ensurepip which debian splits out into python3-venv
+if ! python3 -m ensurepip --version >/dev/null 2>&1; then
+  echo "ERROR: python3-venv is required but ensurepip is not available."
+  echo "On debian: sudo apt install python3-venv python3-dev"
+  exit 1
+fi
 
 echo creating venv....
 rm -rf venv || true
@@ -69,7 +80,7 @@ pip install nomadnet
 pip install rnsh
 
 #meshchat
-git clone https://github.com/liamcottle/reticulum-meshchat.git
+git clone --depth 1 https://github.com/liamcottle/reticulum-meshchat.git
 cd reticulum-meshchat
 
 pip install -r requirements.txt
@@ -90,29 +101,17 @@ else
 fi
 #end meshchat
 cd ../
-# i2pd support
-#TODO Make this optional? It brings in boost and stuff
-sudo apt-get install libminiupnpc-dev
-git clone https://github.com/PurpleI2P/i2pd.git
-# Known good version. Keep this up to date :)
-git checkout 2.58.0
-cd i2pd/build
-cmake  . 
-make -j4     
-#sudo make install 
-cd ../
-debuild --no-tgz-check -us -uc -b
-cd ../
-sudo dpkg -i i2pd_2.58.0-1_arm64.deb
-#copy systemd service file
-# sudo ln -s /usr/local/bin/i2pd /usr/bin/i2pd
-# sudo mkdir /var/log/i2pd
-# sudo cp i2pd/contrib/i2pd.service /lib/systemd/system/i2pd.service
-# sudo mkdir /etc/i2pd
-# sudo mkdir /run/i2pd
-# sudo mkdir /root/.i2pd
-# sudo cp -R i2pd/contrib/certificates/ /root/.i2pd/
-# sudo cp i2pd/contrib/i2pd.conf /etc/i2pd/
+
+# i2pd is a distro package on debian trixie (>= 2.56). install_retcon_locally.sh
+# also runs inside the image build where the retcon-apps layer already
+# installed it, so this is a no-op there.
+if ! command -v i2pd >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y i2pd || echo "WARNING: i2pd install failed"
+  else
+    apt-get update && apt-get install -y i2pd || echo "WARNING: i2pd install failed"
+  fi
+fi
 #end i2p
 
 # yggdrasil support
@@ -135,6 +134,7 @@ sudo dpkg -i i2pd_2.58.0-1_arm64.deb
 # sudo systemctl enable yggdrasil
 # sudo yggdrasil -genconf > /etc/yggdrasil.conf
 # end apps
+
 
 # nodogsplash for captive portal
 # Disabled for now -- we're handling it through just clever DNSmasq rules
@@ -182,8 +182,11 @@ cd $SCRIPTPATH
 #soft link interface folder to here
 ln -s  "$SCRIPTPATH/apps/interfaces" $HOME/.reticulum/interfaces
 
-# add crontab to start on startup
-echo "@reboot $SCRIPTPATH/start_retcon.sh &> /dev/null" | crontab -u $USER -
+# add crontab to start on startup. Note: inside an image build this will
+# fail (build hooks can't write /var/spool/cron); the retcon-apps layer
+# installs /etc/cron.d/retcon-start instead, so that's not an error.
+echo "@reboot $SCRIPTPATH/start_retcon.sh &> /dev/null" | crontab -u $USER - 2>/dev/null || \
+    echo "INFO: skipping user crontab (managed by /etc/cron.d/retcon-start in the image build)"
 
 echo Done. Please reboot to see changes. 
 echo hint: you can reboot with sudo reboot now

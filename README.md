@@ -1,4 +1,4 @@
-# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.1.0
+# RETCON (Reticulum Embedded Turnkey Connection Operating Node) v0.2.0
 
 Because complex networks shouldn't require complex setup.
 
@@ -32,9 +32,13 @@ For running a RETCON image:
 
 ### Dev requirements
 These are only needed for building a flashable RETCON image
-- Debian 12+
+- Debian 12+ (or another deb-based distro with the same tooling)
 - 8GB+ of RAM
-- arm64 environment or qemu supported emulation of arm64 and armf
+- arm64 environment or qemu supported emulation of arm64 and armhf
+
+> Note: images are now built with `rpi-image-gen` **v2.x** (YAML layer/config
+> system). The builder runs unprivileged using user namespaces/podman, and
+> cross-builds arm64 images from x86 hosts via the qemu binfmt emulation.
 
 ### Creating & Deploying a RETCON raspi Image
 
@@ -44,7 +48,7 @@ These are only needed for building a flashable RETCON image
 ```bash
 # Clone from source
 git clone https://github.com/DanBeard/RETCON.git
-cd retcon
+cd RETCON
 
 ```
 
@@ -66,7 +70,7 @@ Grab your favorite drink and relax because it will take a while. The last line p
 
 #### 5. Copy sd card
 
-Use `dd` or raspi imager in "custom image" mode to flash the .img file to an sd card.
+Use `dd` or raspi imager in "custom image" mode to flash the .img file to an sd card. The build also deploys a compressed `retcon.img.zst` which raspi-imager can flash directly.
 
 #### 6. Boot and use
 For devices in client mode:
@@ -126,10 +130,10 @@ Contributions are welcome and appreciated!
 
 ### Debugging, Dev and security Tips
 
-SSH in enabled in the raspi build but disabled on first boot by RETCON. It can be temporarily turned on via the web interface. 
-default username is `retcon` and password is `retcon`. If the node is somewhere people have easy phsyical access to it (or if SSH server is turned on) then this absolutely needs to be changed! 
+SSH is enabled in the raspi build but disabled on first boot by RETCON. It can be temporarily turned on via the web interface. 
+default username is `retcon` and password is `retcon`. If the node is somewhere people have easy physical access to it (or if SSH server is turned on) then this absolutely needs to be changed! 
 
-You can change or configure files on teh SD card without booting. All retcon files are in `/home/retcon/retcon/` 
+You can change or configure files on the SD card without booting. All retcon files are in `/home/retcon/retcon/` 
 
 
 ### Troubleshooting

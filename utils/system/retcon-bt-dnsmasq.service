@@ -1,0 +1,14 @@
+[Unit]
+Description=RETCON BT PAN dnsmasq (br-bt DHCP/DNS for meshchat clients)
+BindsTo=retcon-bt-nap.service
+After=retcon-bt-nap.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/ip link set br-bt up
+ExecStart=/home/retcon/retcon/utils/system/retcon-bt-dnsmasq.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

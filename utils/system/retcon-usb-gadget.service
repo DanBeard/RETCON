@@ -1,0 +1,15 @@
+[Unit]
+Description=RETCON USB gadget (RNDIS+ECM ethernet over the power/data cable)
+After=systemd-modules-load.service
+ConditionPathExists=/sys/class/udc
+
+[Service]
+Type=oneshot
+ExecStart=/home/retcon/retcon/utils/system/usb_gadget.sh
+RemainAfterExit=yes
+# Retry a few times: the UDC can appear slightly after boot on some fw
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

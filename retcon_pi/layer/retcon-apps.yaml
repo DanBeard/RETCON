@@ -36,10 +36,52 @@ mmdebstrap:
     - jq
     # i2pd is packaged in trixie (>= 2.56)
     - i2pd
+    # USB gadget (ethernet over the power/data cable) + BT PAN (optional)
+    - bluez
+    - kmod  # modprobe libcomposite
     # nodejs for the tls proxy; nvm/node handled by retcon bootstrap script
     - curl
     - ca-certificates
   customize-hooks:
+    # ---- USB gadget (the cable is the console) ----
+    # dwc2 overlay exposes the Zero's OTG port as a UDC; libcomposite binds
+    # RNDIS + ECM so every OS sees a NIC without drivers.
+    - |-
+      set -eu
+      if [ -f $1/boot/firmware/config.txt ] && ! grep -q "RETCON: expose the OTG port" $1/boot/firmware/config.txt; then
+        printf "\n# RETCON: expose the OTG port as a USB device controller (gadget)\ndtoverlay=dwc2\n" >> $1/boot/firmware/config.txt
+      fi
+    - mkdir -p $1/etc/systemd/system/multi-user.target.wants
+    - mkdir -p $1/home/$IGconf_device_user1/retcon/utils/system
+    - install -m 755 ${SRCROOT}/../utils/system/usb_gadget.sh $1/home/$IGconf_device_user1/retcon/utils/system/usb_gadget.sh
+    - install -m 644 ${SRCROOT}/../utils/system/retcon-usb-gadget.service $1/etc/systemd/system/retcon-usb-gadget.service
+    - ln -sf /etc/systemd/system/retcon-usb-gadget.service $1/etc/systemd/system/multi-user.target.wants/retcon-usb-gadget.service
+    # usb0: NM shared connection (DHCP+DNS to the laptop, retcon.local works)
+    - |-
+      set -eu
+      mkdir -p $1/etc/NetworkManager/system-connections
+      cat > $1/etc/NetworkManager/system-connections/retcon-usb0.nmconnection <<'NMUSB'
+      [connection]
+      id=retcon-usb0
+      type=ethernet
+      interface-name=usb0
+      autoconnect=true
+
+      [ipv4]
+      method=shared
+      address1=10.55.0.1/24
+
+      [ipv6]
+      method=ignore
+      NMUSB
+      chmod 600 $1/etc/NetworkManager/system-connections/retcon-usb0.nmconnection
+
+    # ---- BT PAN (optional wireless console; started via `btpan on`) ----
+    - install -m 755 ${SRCROOT}/../utils/system/bt_nap.py $1/home/$IGconf_device_user1/retcon/utils/system/bt_nap.py
+    - install -m 755 ${SRCROOT}/../utils/system/retcon-bt-dnsmasq.sh $1/home/$IGconf_device_user1/retcon/utils/system/retcon-bt-dnsmasq.sh
+    - install -m 644 ${SRCROOT}/../utils/system/retcon-bt-nap.service $1/etc/systemd/system/retcon-bt-nap.service
+    - install -m 644 ${SRCROOT}/../utils/system/retcon-bt-dnsmasq.service $1/etc/systemd/system/retcon-bt-dnsmasq.service
+    # NOT enabled by default — admin console `btpan on` starts both once
     # Copy the retcon source tree (SRCROOT is the retcon_pi dir passed via
     # -S) into the image home directory, plus the README for on-device
     # reference. The repo root is one level above SRCROOT.

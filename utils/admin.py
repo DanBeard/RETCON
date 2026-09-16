@@ -242,9 +242,22 @@ class LXMFAdminConsole:
             result += f"heard announces: {len(self._announced_peers)}\n"
             result += "rnsh is not available on the crns transport; use this console"
             return result
+        elif command == "btpan":
+            # opt-in wireless console: bluez NAP + dnsmasq on br-bt. Not
+            # enabled by default (pairing ceremony + no iPhone client).
+            sub = args.strip().lower()
+            if sub == "on":
+                subprocess.Popen("sudo systemctl start retcon-bt-nap.service retcon-bt-dnsmasq.service", shell=True)
+                return "BT PAN starting on br-bt (10.56.0.1/24). Pair, join the PAN, then browse retcon.local."
+            elif sub == "off":
+                subprocess.Popen("sudo systemctl stop retcon-bt-nap.service retcon-bt-dnsmasq.service", shell=True)
+                return "BT PAN stopped."
+            else:
+                return "usage: btpan on|off"
         else:
             return ("Welcome to the RETCON LXMF admin interface. Possible commands are: \n"
-                            "status")
+                            "status\n"
+                            "btpan on|off  (wireless console over bluetooth PAN; iPhones not supported)")
 
     def on_lxmf_recv(self, message):
         reply_hash = message.source_hash

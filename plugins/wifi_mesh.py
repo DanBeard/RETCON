@@ -66,6 +66,26 @@ tcp_client_iface_template = """
   target_port = 4242
   """
 
+# IBSS mode: one broadcast UDP interface, "shout into the void". Every node
+# binds its deterministic link-local address (derived from the node's MAC,
+# same rule the NM adhoc profile configures) and sends RNS packets to the
+# directed broadcast. Discovery is RNS announces, multi-hop is RNS transport.
+# IFAC wraps the shared medium so only nodes with the profile secret can
+# speak/hear. Debug: tcpdump -i wlan0 udp port 4242.
+udp_shout_iface_template = """
+  [[IBSS Shout Interface]]
+  type = UDPInterface
+  enabled = yes
+  mode = full
+  listen_ip = {{listen_ip}}
+  listen_port = 4242
+  forward_ip = 169.254.255.255
+  forward_port = 4242
+  ifac_netname = {{netname}}
+  ifac_netkey = {{netkey}}
+  name = retcon_ibss_shout_iface_{{iface}}
+  """
+
 class WifiMeshPlugin(RetconPlugin):
 
     PLUGIN_NAME = "wifi_mesh"
@@ -78,14 +98,26 @@ class WifiMeshPlugin(RetconPlugin):
     # (for example) plugin_interfaces
     def get_config(self) -> dict:
         wifi = self.retcon_config["retcon"]["wifi"]
-        
-        # Auto interface is too flaky with changing topologies 
-        #interface_str =  Template(auto_iface_template).render(iface=wifi['client_iface'], mode="full")
-        #interface_str += Template(auto_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
-        
-        # tcp interfaces
-        interface_str =  Template(tcp_client_iface_template).render(iface=wifi['client_iface'], mode="full")
-        interface_str += Template(tcp_server_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
+
+        if wifi.get("mesh_mode", "tcp") == "udp":
+            # IBSS mode: one broadcast UDP interface. listen_ip is the node's
+            # deterministic link-local (same derivation the NM adhoc profile
+            # uses: last two MAC octets -> 169.254.a.b). IFAC gates the
+            # medium on the profile psk so the "secret" is a protocol-layer
+            # property, not wifi auth.
+            mac = ni.ifaddresses(wifi['client_iface'])[ni.AF_LINK][0]['addr']
+            octets = [int(x, 16) for x in mac.split(":")]
+            listen_ip = f"169.254.{octets[4]}.{octets[5]}"
+            interface_str = Template(udp_shout_iface_template).render(
+                iface=wifi['client_iface'],
+                listen_ip=listen_ip,
+                netname=wifi.get("prefix", "retcon"),
+                netkey=wifi.get("psk", "retcon"),
+            )
+        else:
+            # tcp interfaces
+            interface_str =  Template(tcp_client_iface_template).render(iface=wifi['client_iface'], mode="full")
+            interface_str += Template(tcp_server_iface_template).render(iface=wifi['ap_iface'], mode="gateway")
         # loopback listener for the on-device meshchat (crns swap: the crns
         # host owns the real interfaces; meshchat is a separate python rns
         # process that joins over TCP loopback)
@@ -98,10 +130,18 @@ class WifiMeshPlugin(RetconPlugin):
     def init(self) -> None:
         logger.info("Init RETCON wifimesh plugin")
 
+        wifi = self.retcon_config["retcon"]["wifi"]
+        if wifi.get("mesh_mode", "tcp") == "udp":
+            # IBSS mode: retcon.py already joined the adhoc cell with a
+            # deterministic link-local. There is nothing to manage after
+            # that — no scan loop, no AP, no DNS. The crns host's UDP
+            # broadcast interface (from get_config) does everything else.
+            logger.info("IBSS mode: wifi is a fixed adhoc cell; no mesh management loop")
+            return
+
         # use multiprocessing for this
         current_env = os.environ.copy()
         script_path = os.path.realpath(__file__)
-        wifi = self.retcon_config["retcon"]["wifi"]
         ap_iface = wifi['ap_iface'] if self.retcon_config["retcon"]["mode"] == 'transport' else None
         if ap_iface:
             self.transport_update_dnsmasq(ap_iface)
@@ -126,6 +166,10 @@ class WifiMeshPlugin(RetconPlugin):
         
         
     async def loop(self):
+        if self.mesh is None:
+            # IBSS mode — nothing to loop on
+            while True:
+                await asyncio.sleep(60)
         await self.mesh.mesh_up(self)
     
 

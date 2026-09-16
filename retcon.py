@@ -96,19 +96,44 @@ if __name__ == "__main__":
     
     # TODO: We should really use dbus directly for this, but nmcli is so much easier
     # Setup wifi interfaces
-    commands = [
-        "nmcli connection delete preconfigured", # bring down and connection that user preconfiged to setup retcon
-        "nmcli connection delete RETCON_WIFI_MESH",
-        "nmcli connection delete retcon_ap",
-        f"nmcli con add con-name retcon_ap ifname {ap_iface} type wifi ssid '{ssid}'",
-        f"nmcli con modify retcon_ap wifi-sec.key-mgmt wpa-psk",
-        f"nmcli con modify retcon_ap wifi-sec.psk '{psk}' ",
-        f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared ipv4.addresses {ip_subnet_str}"
-    ]
-    for command in commands:
-        logger.info(command)
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-        process.wait()
+    mesh_mode = wifi_config.get("mesh_mode", "tcp")
+    if mesh_mode == "udp":
+        # IBSS mode: join the fixed adhoc cell with a deterministic link-local
+        # address (last two MAC octets -> 169.254.a.b/16), the same derivation
+        # the wifi_mesh plugin uses to build the UDP broadcast iface's
+        # listen_ip. No AP, no DHCP, no DNS — RNS announces do discovery and
+        # the transport does multi-hop. IFAC gates the medium on the psk.
+        ll_addr = f"169.254.{(node_id >> 8) & 0xFF}.{node_id & 0xFF}"
+        ibss_ssid = wifi_config.get("ibss_ssid", wifi_config["prefix"] + "MESH")
+        commands = [
+            "nmcli connection delete preconfigured",
+            "nmcli connection delete RETCON_WIFI_MESH",
+            "nmcli connection delete retcon_ap",
+            "nmcli connection delete retcon_ibss",
+            f"nmcli con add con-name retcon_ibss ifname {client_iface} type wifi ssid '{ibss_ssid}'",
+            f"nmcli con modify retcon_ibss 802-11-wireless.mode adhoc 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method manual ipv4.addresses {ll_addr}/16 ipv6.method ignore",
+            f"nmcli con up retcon_ibss",
+        ]
+        for command in commands:
+            logger.info(command)
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+            process.wait()
+
+        logger.info(f"Joined IBSS {ibss_ssid} as {ll_addr}/16")
+    else:
+        commands = [
+            "nmcli connection delete preconfigured", # bring down and connection that user preconfiged to setup retcon
+            "nmcli connection delete RETCON_WIFI_MESH",
+            "nmcli connection delete retcon_ap",
+            f"nmcli con add con-name retcon_ap ifname {ap_iface} type wifi ssid '{ssid}'",
+            f"nmcli con modify retcon_ap wifi-sec.key-mgmt wpa-psk",
+            f"nmcli con modify retcon_ap wifi-sec.psk '{psk}' ",
+            f"nmcli con modify retcon_ap 802-11-wireless.mode ap 802-11-wireless.band bg 802-11-wireless.channel {channel} ipv4.method shared ipv4.addresses {ip_subnet_str}"
+        ]
+        for command in commands:
+            logger.info(command)
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+            process.wait()
     
     logger.info("Brought up AP now letting it settle")
     time.sleep(10)

@@ -8,6 +8,8 @@ RETCON is a streamlined, deployment-focused solution for Reticulum mesh networki
 
 The on-node mesh transport runs on [crns](docs/CRNS-INTEGRATION.md) — a resource-conscious C++20 Reticulum implementation — with the familiar `~/.reticulum` config format and python-RNS-wire-compatible interfaces. On-device apps (meshchat, nomadnet) still speak python rns and join the mesh over a loopback interface; see the integration notes for the architecture.
 
+Wifi meshing and user access (USB gadget, BT PAN, IBSS mode) are documented in [docs/MESH-AND-USER-ACCESS.md](docs/MESH-AND-USER-ACCESS.md).
+
 RETCON enables quick creation of pre-configured Raspberry Pi images that automatically form resilient mesh networks once deployed. It is designed for scenarios where rapid consistent deployment matters more than configuration flexibility - e.g. conferences, maker camps, community events, emergency response situations, and other environments where you need reliable communication infrastructure quickly.
 
 Note: This is currently alpha dev release. Use at your own risk and please give feedback on improvements or potenial PRs!
@@ -127,7 +129,10 @@ Contributions are welcome and appreciated!
 - [ ] 'microRetcon' for hardware platforms (ESP32, etc.)
 - [ ] Integration with more transports (Bluetooth mesh, additional radio modules)
 - [ ] Better error handling around meshchat crashed
-- [ ] Wifi Mesh 2.0 protocol using raw 802.11 data frames (requires monitor mode. If you know how to do this let me know)
+- [x] USB gadget: the Zero's power/data cable becomes a USB NIC (RNDIS+ECM) — plug into a laptop for meshchat at retcon.local (also the fleet-provisioning path)
+- [x] BT PAN (optional, `btpan on`): wireless console via bluetooth NAP for Android/Linux/macOS/Windows (no iPhone support)
+- [x] IBSS (ad-hoc) mesh mode: `mesh_mode = udp` joins a fixed adhoc cell; one broadcast UDP Reticulum interface with IFAC; RNS transport handles multi-hop (requires ad-hoc-capable radio; brcmfmac IBSS is experimental)
+- [ ] ESP-NOW mesh via microRetcon (raw 802.11 data frames without monitor mode — see crns docs/plan/espnow-interface-requirements.md; needs ESP32 hardware)
 
 
 ### Debugging, Dev and security Tips

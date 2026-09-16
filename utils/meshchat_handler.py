@@ -32,7 +32,7 @@ class MeshchatHandle():
         cls.alter_meshchat_config(retcon_config)
         
         cls._singleton = subprocess.Popen(
-            Template(restart_template).render(command=f"find {dir_path}/../storage -type f -name '*.ratchets' -delete && python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip}"), 
+            Template(restart_template).render(command=f"find {dir_path}/../storage -type f -name '*.ratchets' -delete && python {dir_path}/../apps/reticulum-meshchat/meshchat.py --headless --host {ip} --storage-dir {dir_path}/../storage"), 
             shell=True, env=current_env)
         
         time.sleep(2.5)

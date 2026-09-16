@@ -153,12 +153,12 @@ class RetconMesh:
             if name == self.client_iface:
                 self.client = generic_device
                 self._client_path = device_path
-                logger.info('Client : ', await generic_device.interface)
+                logger.info(f"Client : {await generic_device.interface}")
             elif name == self.ap_iface:
                 self.ap = generic_device
-                logger.info('AP     : ', await generic_device.interface)
+                logger.info(f"AP     : {await generic_device.interface}")
             else:
-                logger.info('       : ', await generic_device.interface)
+                logger.info(f"       : {await generic_device.interface}")
                 
         if self.client is None:
             raise ConnectionError("Could not find client iface " + self.client_iface)
@@ -190,6 +190,8 @@ class RetconMesh:
                 for ap in all_aps:
                     ssid = await ap.ssid
                     freq = await ap.frequency
+                    if ssid is None:
+                        continue # hidden or in-progress APs can have a None ssid
                     if ssid.startswith(self.ssid_prefix):
                         if freq == self.freq:
                             valid_aps.append(ap)
@@ -211,6 +213,7 @@ class RetconMesh:
     async def connect_client(self):
         # Go through all the valid APs and pick one to connect to
         aps = [(x, await x.ssid, await x.strength) for x in self._client_ap_choices]
+        aps = [x for x in aps if x[1] is not None]  # skip hidden APs
         aps.sort(key=lambda y: y[2], reverse=True) # sort by strength DESC
         logger.info("APs :", aps)
         if len(aps) == 0:
@@ -274,8 +277,10 @@ class RetconMesh:
                 pass
             
         if ip is None:
+            logger.error("Could not get an IP address on the mesh. Skipping /etc/hosts gateway update")
             await self.client.disconnect()
-            
+            return
+        
         with open("/etc/hosts", 'r') as fin:
             logger.info("Reading hosts file")
             hosts = fin.read()
@@ -329,7 +334,7 @@ class RetconMesh:
 
 if __name__ == "__main__":
     args = sys.argv
-    ap_iface = args[5] if len(args[5]) > 1 else None
+    ap_iface = args[5] if len(args) > 5 and args[5] != "None" else None
     mesh = RetconMesh(args[1].encode(), args[2], int(args[3]), args[4], ap_iface)
     asyncio.run(mesh.mesh_up())
 

@@ -41,7 +41,7 @@ echo "INFO: This utility is meant for advanced users to build a customized RETCO
 echo "Examine the script before running to make sure you're cool with what it's doing!"
 echo ""
 echo "Ensure you ran ./install_prereqs.sh FIRST. That is REQUIRED for this process to work."
-echo "This script will install and use the rpi-image-gen at at ~/.retcon-build/ to build an deployable rpi image."
+echo "This script will install and use the rpi-image-gen at ~/.retcon-build/ to build a deployable rpi image."
 echo "It is heavily dependent on debian and is recommended to be run on a an rpi4 or rpi5"
 echo "(Though it has been tested on x86 using the automatic qemu arm emulation layer and that appears to work)"
 echo "Non debian based distros (e.g. fedora, arch, etc) will probably not work"
@@ -53,21 +53,40 @@ prompt_confirm "ok to run?" || exit 0
 pathadd "/usr/sbin"
 pathadd "/sbin"
 
-sudo rm -rf $HOME/.retcon-build || true
-
-mkdir $HOME/.retcon-build
+mkdir -p $HOME/.retcon-build
 
 cd $HOME/.retcon-build
-git clone https://github.com/raspberrypi/rpi-image-gen.git
-cd rpi-image-gen
+if [ -d rpi-image-gen ]; then
+  echo "rpi-image-gen checkout already present, updating..."
+  cd rpi-image-gen
+  git fetch --tags origin
+else
+  git clone https://github.com/raspberrypi/rpi-image-gen.git
+  cd rpi-image-gen
+fi
 
 # Checkout to a known good release tag. Make sure to keep this up to date :)
-git checkout v1.0.0
+git checkout v2.8.0
 
 # deps should already have been installed in ./install_prereqs
-# Do the build
-./build.sh -c retcon -D $SCRIPTPATH/retcon_pi/ -o $SCRIPTPATH/retcon_pi/retcon.options -N retcon
+# Do the build.
+#
+# rpi-image-gen v2 CLI:
+#   -S  source dir holding our config, layers and assets
+#   -c  config file (resolved against the source dir)
+#   -B  build/work root
+#   -N  was removed in v2; image name now comes from the config (image.name)
+./rpi-image-gen build \
+  -S $SCRIPTPATH/retcon_pi \
+  -c retcon.yaml \
+  -B $HOME/.retcon-build/work
+
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "BUILD FAILED with exit code $rc"
+  exit $rc
+fi
 
 echo "DONE!"
 echo ""
-echo "image file located at $HOME/.retcon-build/rpi-image-gen/work/retcon/artefacts/retcon.img"
+echo "image file located at $HOME/.retcon-build/work/image-retcon/retcon.img"

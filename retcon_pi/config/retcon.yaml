@@ -1,0 +1,37 @@
+# RETCON build configuration for rpi-image-gen v2.x
+#
+# Builds the Debian Trixie (Deb 13) based RETCON image for Raspberry Pi
+# Zero 2 W / 3 / 4 / 5 class hardware. Layers are resolved from the
+# in-tree rpi-image-gen library plus the custom layers in this directory
+# (see layer/ and bdebstrap/).
+#
+# Build with:  ./build_retcon.sh   (which runs:
+#   rpi-image-gen build -S <repo>/retcon_pi -c config/retcon.yaml)
+
+device:
+  layer: rpizero2w
+  hostname: retcon-transport
+  user1: retcon
+  # Default password is 'retcon'. This is intentionally weak: nodes are
+  # expected to be physically reachable. Change it for any node left
+  # somewhere untrusted! (hash of 'retcon')
+  user1passhash: $6$RETCON42$Wqi4Xw10xfou4Vrsw2k.dpk0MLZF9cPOjlge47nlzSVuCVvh/APNzLqxXCxCe8z.TlwMCpUfN6hUZe8ytbIiQ1
+  user1sudo: nopasswd
+  user1groups: adm,dialout,audio,users,video,plugdev,input,netdev,gpio,i2c,spi
+
+# System locale (US english, matching the old profile defaults)
+locale:
+  default: en_US.UTF-8
+  keyboard_keymap: us
+  keyboard_layout: "English (US)"
+  timezone: America/Chicago
+
+image:
+  layer: image-rpios
+  boot_part_size: 125%
+  root_part_size: 250%
+  name: retcon
+  compression: zstd
+
+layer:
+  custom: retcon-suite

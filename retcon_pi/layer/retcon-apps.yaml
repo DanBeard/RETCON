@@ -1,0 +1,131 @@
+# METABEGIN
+# X-Env-Layer-Name: retcon-apps
+# X-Env-Layer-Category: application
+# X-Env-Layer-Desc: Installs the RETCON source tree and builds the RETCON
+#  python venv, meshchat and i2pd inside the image. Expects the whole RETCON
+#  repository to sit one level above SRCROOT (the retcon_pi directory passed
+#  to rpi-image-gen via -S), which build_retcon.sh guarantees.
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: device-user-admin,systemd-min
+# METAEND
+---
+mmdebstrap:
+  packages:
+    # retcon service deps
+    - python3-dev
+    - python3-venv
+    - python3-pip
+    - libdbus-1-dev
+    - libdbus-glib-1-dev
+    - libglib2.0-dev
+    - build-essential
+    - libffi-dev
+    - git
+    # wifi mesh / virtual AP support
+    - iw
+    - wireless-tools
+    - wpasupplicant
+    # captive portal DNS redirect
+    - dnsmasq-base
+    - dns-root-data
+    # run things on port 80/443 as an unprivileged user
+    - authbind
+    - cron
+    - iptables
+    - jq
+    # i2pd is packaged in trixie (>= 2.56)
+    - i2pd
+    # nodejs for the tls proxy; nvm/node handled by retcon bootstrap script
+    - curl
+    - ca-certificates
+  customize-hooks:
+    # Copy the retcon source tree (SRCROOT is the retcon_pi dir passed via
+    # -S) into the image home directory, plus the README for on-device
+    # reference. The repo root is one level above SRCROOT.
+    - mkdir -p $1/home/$IGconf_device_user1/retcon
+    - cp -r ${SRCROOT}/../. $1/home/$IGconf_device_user1/retcon/
+    - cp $1/home/$IGconf_device_user1/retcon/README.md $1/README.md
+    - |-
+      set -eu
+      # drop build-time junk that should not ship on the device
+      rm -rf $1/home/$IGconf_device_user1/retcon/.git
+      chroot $1 chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1/retcon
+    # Run the retcon local installer inside the chroot as the device user.
+    - |-
+      uchroot $1 bash <<- EOCHROOT
+      set -e
+      cd /home/$IGconf_device_user1/retcon
+      export HOME=/home/$IGconf_device_user1
+      export USER=$IGconf_device_user1
+      export NVM_DIR=/home/$IGconf_device_user1/.nvm
+      mkdir -p /home/$IGconf_device_user1/.nvm
+      ./install_retcon_locally.sh -y
+      EOCHROOT
+    # authbind: allow the retcon user to bind low ports for the web UI/proxy
+    - |-
+      set -eu
+      touch $1/etc/authbind/byport/80 $1/etc/authbind/byport/443
+      chmod 700 $1/etc/authbind/byport/80 $1/etc/authbind/byport/443
+      chroot $1 chown ${IGconf_device_user1}:${IGconf_device_user1} /etc/authbind/byport/80 /etc/authbind/byport/443
+    # sudo rules so the admin interfaces can reboot/toggle ssh/set clock
+    - |-
+      set -eu
+      U=$IGconf_device_user1
+      echo "$U ALL=NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff" > $1/etc/sudoers.d/011-retcon-reboot
+      echo "$U ALL=NOPASSWD: /usr/bin/nodogsplash" > $1/etc/sudoers.d/011-retcon-nodogsplash
+      echo "$U ALL=NOPASSWD: /usr/bin/systemctl" > $1/etc/sudoers.d/011-retcon-systemctl
+      echo "$U ALL=NOPASSWD: /usr/bin/date" > $1/etc/sudoers.d/011-retcon-date
+      chmod 0440 $1/etc/sudoers.d/011-retcon-*
+    # polkit: let the retcon user control NetworkManager over dbus without sudo
+    - |-
+      set -eu
+      mkdir -p $1/etc/polkit-1/localauthority/50-local.d
+      echo "[Allow installed user to control networking]
+      Identity=unix-user:$IGconf_device_user1
+      Action=org.freedesktop.NetworkManager.*
+      ResultAny=yes
+      ResultInactive=yes
+      ResultActive=yes" > $1/etc/polkit-1/localauthority/50-local.d/10-network-manager.pkla
+    # dnsmasq (NetworkManager shared mode) DNS redirects for the captive portal
+    - |-
+      set -eu
+      cat > $1/etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf <<EOCFGL
+      address=/con/10.42.0.1
+      address=/retcon/10.42.0.1
+      address=/retcon.com/10.42.0.1
+      address=/retcon.net/10.42.0.1
+      address=/retcon.org/10.42.0.1
+      address=/ret.con/10.42.0.1
+      address=/ret.com/10.42.0.1
+      address=/retcon.local/10.42.0.1
+      address=/retcon.radio/10.42.0.1
+      address=/mask.icloud.com/
+      address=/mask-h2.icloud.com/
+      EOCFGL
+      chmod a+w $1/etc/NetworkManager/dnsmasq-shared.d/retcon_redirect.conf
+      chmod a+w $1/etc/hosts
+    # udev rule: create the uap0 virtual AP interface on wlan0 hotplug
+    - |-
+      set -eu
+      rm -f $1/etc/udev/rules.d/90-wireless.rules
+      echo 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan0", \
+          RUN+="/sbin/iw dev %k interface add uap0 type __ap"
+      ' > $1/etc/udev/rules.d/90-wireless.rules
+    # crontab: start retcon on boot. /etc/cron.d is used since v2 build
+    # hooks cannot write to /var/spool/cron (permission denied).
+    - |-
+      set -eu
+      echo "@reboot $IGconf_device_user1 /home/$IGconf_device_user1/retcon/start_retcon.sh &> /dev/null" > $1/etc/cron.d/retcon-start
+      chmod 0644 $1/etc/cron.d/retcon-start
+    - chroot $1 chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/$IGconf_device_user1/retcon
+    # download firmware artefacts bundled with the image. Best effort: the
+    # rnode flashing UI degrades gracefully without them. Uses the venv
+    # python since download_firmware.py needs 'requests'.
+    - |-
+      set +e
+      uchroot $1 'cd /home/$USER/retcon/utils && /home/$USER/retcon/venv/bin/python3 download_firmware.py'
+      rc=$?
+      if [ $rc -ne 0 ]; then
+        echo "WARNING: firmware download failed during build (rc=$rc); flashing UI will fetch on demand"
+      fi
+      exit 0

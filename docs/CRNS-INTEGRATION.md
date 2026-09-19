@@ -151,6 +151,15 @@ Two fixes were needed on the crns branch to get there, both now on
   image's venv (binding + libcrns.so.2 staged in site-packages), and the
   generated `~/.meshchat-rns/config` is present with `share_instance =
   no`.
+- **large messages (crns sprint 123, 2026-09-19)**: `send_direct()` —
+  Link + rns-wire Resources, auto-chained across 32 KiB segments, up to
+  the 0xFFFF packed-message bound. A 64000-byte (2-segment) round-trip
+  verified byte-exact with `DirectSend.wait()` → DELIVERED. The console
+  exposes it as `peers` + `sendfile <dest_hash> <path> [title]`
+  (payloads ≤ 0xF000 bytes per message; the packed LXMF overhead eats
+  the rest of 0xFFFF). Anything larger stays on the dashboard download
+  path — one LXMF message is protocol-honestly capped, the same ceiling
+  python RNS enforces.
 
 ## Open items
 

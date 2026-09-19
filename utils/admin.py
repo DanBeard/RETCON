@@ -222,6 +222,40 @@ class LXMFAdminConsole:
         """Track heard LXMF peers so replies know when a path is fresh."""
         self._announced_peers[announce.destination_hash] = time.time()
 
+    # -- mesh file send ---------------------------------------------------
+
+    # A single DIRECT LXMF message tops out at the packed-message bound
+    # (0xFFFF on hosted crns profiles). The packed wire adds the LXMF header,
+    # signature and bin headers, so keep the file payload well under it.
+    SENDFILE_MAX_BYTES = 0xF000
+
+    def send_file(self, dest_hash: bytes, path: str, title: str = ""):
+        """Send a small file to a peer over the mesh via send_direct.
+
+        Uses the crns Link+Resource path (rns-wire Resources, auto-chained
+        across 32 KiB segments), so the transfer is reliable and concludes —
+        returns the DirectSend handle so the caller can wait on it.
+
+        Bound: SENDFILE_MAX_BYTES of payload per message (the packed LXMF
+        ceiling is 0xFFFF; overhead eats the difference). Larger files need
+        chunking or the dashboard download path instead.
+        """
+        path = os.path.realpath(os.path.expanduser(path))
+        size = os.path.getsize(path)
+        if size > self.SENDFILE_MAX_BYTES:
+            raise ValueError(
+                f"{size} bytes exceeds the {self.SENDFILE_MAX_BYTES} "
+                "send_direct file bound — use the dashboard download path"
+            )
+        with open(path, "rb") as fin:
+            content = fin.read()
+        send = self.r.send_direct(
+            dest_hash,
+            content=content,
+            title=(title or os.path.basename(path)).encode()[:64],
+        )
+        return send
+
     # -- command handling --------------------------------------------------
 
     def process_command(self, message:bytes):
@@ -242,6 +276,43 @@ class LXMFAdminConsole:
             result += f"heard announces: {len(self._announced_peers)}\n"
             result += "rnsh is not available on the crns transport; use this console"
             return result
+        elif command == "peers":
+            # heard LXMF destinations with rough freshness — what an operator
+            # needs to pick a target for sendfile
+            if not self._announced_peers:
+                return "no peers heard yet"
+            lines = []
+            for dest, heard_at in sorted(
+                self._announced_peers.items(), key=lambda kv: -kv[1]
+            ):
+                age = max(0, int(time.time() - heard_at))
+                lines.append(f"{dest.hex()} (heard {age}s ago)")
+            return "\n".join(lines)
+        elif command == "sendfile":
+            # sendfile <dest_hash_hex> <path> [title] — push a small file to
+            # a peer over the mesh (Link + rns-wire Resources).
+            parts = args.split()
+            if len(parts) < 2:
+                return "usage: sendfile <dest_hash_hex> <path> [title]"
+            dest_hex, fpath = parts[0], parts[1]
+            title = parts[2] if len(parts) > 2 else ""
+            try:
+                dest = bytes.fromhex(dest_hex)
+            except ValueError:
+                return "destination hash must be 32 hex characters"
+            if len(dest) != 16 and len(dest) != 32:
+                return "destination hash must be 32 hex characters (16 or 32 bytes)"
+            if not self.r.has_path(dest):
+                self.r.request_path(dest)
+                return "no path yet — path request sent; try again shortly"
+            try:
+                send = self.send_file(dest, fpath, title)
+            except ValueError as e:
+                return f"refused: {e}"
+            except Exception as e:
+                return f"send failed: {e}"
+            status = send.wait(90)
+            return f"transfer {status.name if hasattr(status, 'name') else status}"
         elif command == "btpan":
             # opt-in wireless console: bluez NAP + dnsmasq on br-bt. Not
             # enabled by default (pairing ceremony + no iPhone client).
@@ -257,6 +328,8 @@ class LXMFAdminConsole:
         else:
             return ("Welcome to the RETCON LXMF admin interface. Possible commands are: \n"
                             "status\n"
+                            "peers\n"
+                            "sendfile <dest_hash_hex> <path> [title]  (push a small file over the mesh)\n"
                             "btpan on|off  (wireless console over bluetooth PAN; iPhones not supported)")
 
     def on_lxmf_recv(self, message):

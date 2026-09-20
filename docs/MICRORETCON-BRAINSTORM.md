@@ -147,3 +147,140 @@ is ever actually needed.
 4. Then the NCM gadget + HTML UI.
 5. ESP-NOW wire-compat with `rns-if-espnow` stays a non-goal (same call as
    the research doc made).
+
+---
+
+## Round 2 — pushing logic OFF the device: the server is a pipe, not a brain
+
+The design constraint that matters most: **the ESP32 must never be the
+bottleneck for capability.** It runs crns (the mesh), a USB stack, and a
+near-zero-thought HTTP pipe. Everything that needs "horsepower" — UI
+rendering, message composition, maps, crypto-heavy bulk ops, storage,
+*any* scripting — happens on the device the user already owns (laptop,
+phone, tablet). The ESP32 is a smart radio dongle with a USB port.
+
+### Three attachment modes, one contract
+
+The gadget exposes the same small HTTP+JSON API regardless of which of
+these the host machine picks:
+
+| Attachment | What it is | Who it serves |
+|---|---|---|
+| **USB NCM/RNDIS gadget** (primary) | ESP32 appears as a USB ethernet NIC; HTTP+DNS captive portal at `retcon.local` | Any laptop/phone with a browser — zero install |
+| **USB MSC (mass storage)** | ESP32 appears as a USB flash drive with `START_HERE.html` + files | Truly "off to the races": the UI literally opens from the drive, or a portable-HTML launcher |
+| **USB CDC serial** (transport mode) | HDLC-framed RNS interface; also a JSON-over-serial console for headless ops | Debugging, transport nodes, future Web-Serial UI |
+
+Composite TinyUSB makes CDC+MSC+(NCM) simultaneous on one port, so a single
+plugged-in device can be *all three at once* — ethernet gadget AND a flash
+drive with the launcher page AND a serial console. That's the "hand it to a
+normy" story: **plug in the cable, a drive pops up, double-click
+START_HERE.html, done.** No pip, no drivers on modern OSes (NCM/MSC/CDC are
+class drivers).
+
+### The client-side architecture (where the "logic" lives)
+
+The HTTP server serves **static assets + a JSON API**; the intelligence is
+in a browser app delivered from the device's flash (or the MSC volume):
+
+```
+ESP32 (dumb pipe)                    Laptop browser (smart client)
+┌──────────────────────────┐         ┌────────────────────────────────┐
+│ crns Node (mesh truth)   │  HTTP   │ SPA: rendering, message draft, │
+│ /api/status  (json)      │ ←────── │ identity management, maps,     │
+│ /api/peers, /api/announce│         │ bulk listing, caching          │
+│ /api/msg (send/recv poll)│         │                                │
+│ /api/config (read/write) │         │                                │
+│ /files/* (static SPA)    │         │                                │
+└──────────────────────────┘         └────────────────────────────────┘
+```
+
+- The SPA is a few KB of vanilla JS (or Preact-lite, ~10 KB) — no build
+  step, no npm. It renders, drafts, and talks to the JSON API. It can be
+  as fancy as the laptop can render, because it never touches the ESP32's
+  CPU.
+- **State lives in two places, by rule:** the mesh-side state (identity,
+  LXMF inbox, paths) lives on the ESP32 in crns structures; UI-side state
+  (drafts, UI prefs, cache) lives in the browser's localStorage. The API is
+  stateless between requests — every page load re-syncs from the device.
+- The **MSC volume is a bonus channel, not the app**: firmware-side it's a
+  read-only FAT image served from flash (esp_vfs_fat + TinyUSB MSC — a
+  static 256 KB-4 MB region), so the drive is literally a read-only window
+  onto the same files the HTTP server serves. START_HERE.html explains and
+  links to `http://retcon.local` (which the NCM interface serves
+  simultaneously). No sync problem: one source of truth (flash), two
+  windows onto it.
+
+### On the "WASM reticulum in the browser" idea — why I'd split it the other way
+
+The temptation: compile Reticulum to WASM so the browser is a real RNS
+peer and the ESP32 is just a radio. Three reasons that inverts the right
+split here:
+
+1. **No RNS WASM port exists.** BearSSL (crns's crypto) would need an
+   Emscripten port first (60-100 KB), then the whole crns core, then LXMF —
+   and the crypto + transport state machine is exactly the part that must
+   be *right* and is the hardest to keep in sync with the real stack.
+2. **Identity splits in two.** If the browser runs RNS, your LXMF identity
+   keys live in browser localStorage — cleared on "clear browsing data",
+   per-browser, per-machine. The whole point of RETCON identity is that it
+   lives on the device (the Pi already does `~/retcon/storage/identity`).
+   A browser-side peer forks the identity model.
+3. **The browser has no mesh attachment anyway.** Even with WASM RNS, the
+   browser can't reach ESP-NOW or LoRa — it would still tunnel over USB to
+   the ESP32. So the WASM peer adds a second, parallel RNS stack talking to
+   the first, and the ESP32 is still the radio. All cost, no capability.
+
+The design that preserves your actual goal ("logic lives away from the
+ESP32") without a WASM port: **the ESP32 is a Reticulum node with a dumb
+JSON API, and the browser does everything that isn't mesh protocol.**
+Rendering, composition, search, history, maps, even end-to-end crypto for
+*user-authored* payloads can be browser-side (WebCrypto ed25519 exists in
+Chrome/Firefox/Safari 17+) — as long as the *Reticulum* identity and its
+signing stay on-device. Where the line sits exactly (e.g. is LXMF envelope
+crypto on-device, with only rendering remote?) is a real design decision
+worth its own doc — the default here is: mesh crypto on-device, everything
+else in the browser.
+
+### The transport mode answer
+
+In transport mode the same HTTP+JSON surface is available over **CDC serial**
+using the **Web Serial API** (Chrome/Edge; a ~200-line serial-to-JSON
+bridge in the browser) — so even a transport node with no NCM gadget is
+configurable from a browser page served *from the MSC volume* (the drive
+pops up, you open START_HERE.html, it talks JSON over serial with a user
+gesture). No ethernet gadget needed for configuration; the mesh itself
+still rides ESP-NOW + LoRa + the serial RNS iface.
+
+### What the ESP32's HTTP server actually needs to be
+
+- lwIP's bundled httpd (esp_http_server): handles GET/POST, ~20 KB flash,
+  no TLS (gadget = direct USB attach, no network in between), serves the
+  SPA + JSON routes. Captive-portal DNS: lwIP has no built-in DNS server,
+  but a 53/udp responder that answers `A retcon.local → gadget IP` is
+  ~100 lines.
+- Endpoints, all JSON, all synchronous-ish (crns submit() shaped):
+  - `GET /api/status` — identity hash, mode, ifaces, transport fwd status
+  - `GET /api/peers` — heard announces + freshness + paths
+  - `GET /api/inbox` — LXMF messages (paged; stored in a FAT ring)
+  - `POST /api/send` — {dest, title, content} → DirectSend, returns handle
+  - `GET /api/send/<id>` — poll a DirectSend's status
+  - `GET/POST /api/config` — the [reticulum]/[micro] config, same keys as
+    the Pi
+  - `POST /api/announce` — announce now
+- **No TLS.** The gadget is a direct USB attach (no network hop to
+  intercept); the mesh provides its own crypto end-to-end. HTTPS on an
+  ESP32 without a real CA cert buys a browser warning, not security.
+- Rate/bulk: message bodies are capped by the same 0xFFFF packed bound;
+  bulk file transfer (firmware updates, image pulls) rides MSC or the
+  dashboard, not the JSON API.
+
+### What this makes the ESP32's actual CPU cost
+
+- crns Node + 2-3 ifaces: measured 268 KB RAM (node profile)
+- TinyUSB composite: ~15-30 KB RAM
+- lwIP + httpd + captive DNS: ~40-60 KB RAM
+- FatFS ring for LXMF inbox: flash-side, RAM cost is the read buffer
+
+Total ~350-400 KB of 520 KB — fits a classic ESP32 in client mode
+(comfortably on an S3). The render/compose/script work is 0 bytes of it,
+which is the entire point of the round-2 design.

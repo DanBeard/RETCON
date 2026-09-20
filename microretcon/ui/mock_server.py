@@ -469,4 +469,5 @@ if __name__ == "__main__":
         NODE_NAME = sys.argv[1]
     start_device()
     PORT = int(os.environ.get("MICRO_PORT", "8099"))
-    app.run(host="127.0.0.1", port=PORT, threaded=True)
+    BIND_HOST = os.environ.get("MICRO_BIND", "0.0.0.0")
+    app.run(host=BIND_HOST, port=PORT, threaded=True)

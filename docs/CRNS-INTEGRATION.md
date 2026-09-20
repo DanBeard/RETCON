@@ -94,7 +94,10 @@ changes:
 2. `cmake -DCRNS_BUILD_SHARED=ON -DCRNS_WITH_BEARSSL=ON` → `libcrns.so`
 3. vendor `libcrns.so*` to `crns_lib/` and the pure-python
    `python/crns` package to `python_packages/crns`
-4. sanity-import: `import crns; crns.abi_version()`
+4. sanity-import: `import crns; crns.abi_version()` — expect 2.2.0
+   (W-series: store seam, browser profile; §102 auto-prove on
+   register_destination — `prove_all` kwarg is gone, prove is the
+   default with `set_proof_strategy` to override)
 
 `CRNS_LIBRARY` is exported before anything imports `crns`, so the binding
 dlopens the freshly built library.

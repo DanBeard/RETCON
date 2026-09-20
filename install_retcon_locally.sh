@@ -74,7 +74,7 @@ pip install -r requirements.txt
 #   2. $SCRIPTPATH/crns  — a checkout staged next to the repo
 #   3. clone $CRNS_REPO at $CRNS_REF (dev hosts with ssh access)
 crns_repo=${CRNS_REPO:-ssh://git@192.168.0.2:2222/dbeard/crns.git}
-crns_ref=${CRNS_REF:-retcon/posix-build-fixes}
+crns_ref=${CRNS_REF:-main}
 mkdir -p apps
 if [ -n "${CRNS_LOCAL_DIR:-}" ] && [ -d "$CRNS_LOCAL_DIR" ]; then
   echo "using local crns checkout: $CRNS_LOCAL_DIR"

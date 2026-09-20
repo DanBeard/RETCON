@@ -142,8 +142,9 @@ $("peers-body").addEventListener("click", async (ev) => {
   if (!btn) return;
   const dest = btn.dataset.dest;
   if (btn.dataset.act === "compose") {
-    showTab("messages");               // rebuilds the picker — order matters
-    $("compose-dest").value = dest;    // select AFTER the rebuild
+    showTab("messages");               // fires the peers refresh (async)
+    await refreshPeers();              // wait for the picker rebuild…
+    $("compose-dest").value = dest;    // …then select the peer
     $("compose-dest-hash").value = "";
     $("compose-content").focus();
   } else if (btn.dataset.act === "path") {

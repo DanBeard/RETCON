@@ -36,7 +36,7 @@ table td, table th { font-size: 11px; }
 .msg-body {
   background: #fff; box-shadow: inset -1px -1px #fff, inset 1px 1px grey,
   inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
-  padding: 8px; min-height: 140px; max-height: 320px; overflow: auto;
+  padding: 8px; min-height: 120px; max-height: 220px; overflow: auto;
   white-space: pre-wrap; word-break: break-word; font-size: 12px;
 }
 .msg-meta { color: #444; font-size: 11px; margin-bottom: 6px; }

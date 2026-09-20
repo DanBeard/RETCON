@@ -284,3 +284,96 @@ still rides ESP-NOW + LoRa + the serial RNS iface.
 Total ~350-400 KB of 520 KB — fits a classic ESP32 in client mode
 (comfortably on an S3). The render/compose/script work is 0 bytes of it,
 which is the entire point of the round-2 design.
+
+---
+
+## Round 3 — you're already building an Emscripten crns: so make the browser a *real* peer
+
+That changes the round-2 verdict materially. If an Emscripten build of
+crns_core (+ BearSSL — vendored C, compiles under emcc fine) exists as a
+first-order concept anyway, the browser can be an actual Reticulum node,
+not a JSON observer. The honest comparison, now that the WASM stack is
+real:
+
+### The two shapes, side by side
+
+**A. HTTP-pipe (round 2).** ESP32 = mesh + JSON API; browser = renderer.
+Identity on device. Zero new protocol work. Browser is a *passenger*.
+
+**B. WASM peer over Web Serial.** The ESP32 is a **dumb radio dongle**:
+ESP-NOW radio + (optional) LoRa radio + a KISS/HDLC byte pipe over USB
+CDC. The browser runs **WASM crns**: full Node, path table, LXMF,
+identity — everything. The "HTTP server" shrinks to almost nothing (a
+static page off MSC + maybe a 100-line fallback API).
+
+| | A: HTTP pipe | B: WASM peer over serial |
+|---|---|---|
+| ESP32 RAM | ~350-400 KB (runs the whole node) | **~30-80 KB** (radio glue + queue + USB stack only; maybe not even crns core resident) |
+| ESP32 CPU | crns loop, crypto on-device | ~idle: forward bytes, that's it |
+| Identity lives | device flash (survives browser wipe, survives moving the node to another computer) | browser localStorage/IndexedDB (per-browser, per-machine) |
+| Works in Firefox/Safari | yes (plain HTTP) | Chromium-only for Web Serial (Firefox: no; Safari: no) |
+| Requires user gesture/permission | no (gadget just appears) | yes (Web Serial permission prompt, every browser restart unless persistent permission lands) |
+| New code to write/maintain | tiny API + static SPA | Emscripten build of crns_core + BearSSL + an `IPlatform` shim for browser (no clock/rng/file/storage) + a serial transport class + a **second build target forever** |
+| Upgrade risk | none — follows crns | every core change re-builds WASM; ABI/behavior drift between the firmware node and the browser node is a real bug class |
+| The mesh sees | one node (the ESP32) | one node (the browser), with the ESP32 as a peripheral |
+
+### Why the identity split is the crux, and why explicitness beats cleverness
+
+You said it exactly right: **both are defensible, the sin is being
+implicit.** So make identity *location* a first-class, stated choice with
+its consequences spelled out:
+
+- **Device-resident identity (A):** identity persists on the ESP32's NVS
+  or a FAT file. Moving the node between computers carries your identity.
+  Browser wipe never loses your keys. Two computers can't accidentally
+  become two identities. The browser is a *window*; lose the browser,
+  lose nothing.
+- **Browser-resident identity (B):** the identity is yours on *that
+  machine, that browser profile*. The ESP32 is disposable hardware — lose
+  or swap it, nothing of yours is lost (arguably *better* for hand-to-a-
+  person: the device holds no secrets at all, so losing it is free).
+  Export/import (an identity file you download and re-upload) becomes a
+  mandatory feature, not an option — and "clear site data" must warn, not
+  silently destroy a mesh identity someone's been using for months.
+
+Neither is wrong. **What's non-negotiable is that the firmware and the UI
+agree and tell the user which world they're in.** The `GET /api/status`
+payload should include `identity_location: "device" | "browser"` and the
+UI should surface it on the status page in plain words.
+
+### The actually-interesting hybrid (probably the answer)
+
+They're not mutually exclusive — they compose by *moving which layer owns
+RNS*:
+
+- **Ship A first.** It's buildable today with zero WASM work, works in
+  every browser, keeps identity on-device, and gets the mesh + UI live.
+  The JSON API is the contract.
+- **Design the API so B can replace A's brain later.** The API endpoints
+  (`/api/peers`, `/api/send`, …) are exactly the surface a WASM node's
+  *UI* would also want (the WASM node calls back into its own state).
+  Same UI, different backing. The ESP32 firmware for B shrinks to:
+  radio seams + a byte pipe + the config, which is nearly the transport
+  node already built in step 2 of the sequencing plan.
+- **Then B is an opt-in identity mode, not a fork.** Same firmware, two
+  identity postures, chosen at first-run and shown on the status page:
+  *"keys live on this device"* vs *"keys live in this browser — export
+  them"*. A user who loses a browser profile exports nothing and starts
+  fresh; a user who moves between machines exports and re-imports.
+
+The WASM cost, honestly: crns_core + BearSSL at -Os is plausibly
+~300-500 KB of wasm (the freestanding discipline means no libc surprises,
+which is what makes an Emscripten port tractable at all), plus an
+`IPlatform` shim (clock/rng/log/storage — rng from WebCrypto
+`getRandomValues`, storage in IndexedDB). Not a monster. The recurring
+cost is the **second forever-target**: every core change re-verifies on
+xtensa (firmware) and wasm (browser). That maintenance line is the real
+price, and it's why B should follow A rather than lead it.
+
+### Server still the play? Yes — but as stage one, not stage final
+
+The tiny HTTP server is the **always-works floor**: any browser, any OS,
+identity on-device, zero new port work. The WASM peer is the
+**Chromium-power-user upgrade** layered on the same USB pipe and the same
+UI shell (the SPA detects: Web Serial available? offer "browser-run");
+identity posture is the switch, and it's explicit from first run.

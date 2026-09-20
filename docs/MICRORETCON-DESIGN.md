@@ -32,7 +32,7 @@ board with no python. The user-facing contract:
 
 | Board | Radios | USB | RAM/flash | Profile | Notes |
 |---|---|---|---|---|---|
-| **LILYGO T-Deck Plus** (primary) | SX1262 LoRa, WiFi, BLE | USB-OTG (S3) | 8 MB PSRAM / 16 MB flash | `node()` or `router()` w/ PSRAM spill | the "hand to a person" device; has screen+keyboard too (later scope) |
+| **Seeed XIAO ESP32S3 + Wio-SX1262 kit** (primary) | SX1262 LoRa (external module), WiFi, BLE | USB-C (S3 native) | 8 MB PSRAM / 16 MB flash | `node()` w/ PSRAM | the "hand to a person" device — tiny, cheap, Meshtastic-ecosystem kit; no screen (USB console IS the UI) |
 | **LILYGO T3-S3** | SX1262, WiFi, BLE | USB-OTG | 8 MB PSRAM variants | `router()` | transport-first board |
 | **classic ESP32 + SX1276 hat** | LoRa via SPI, WiFi (no BLE5) | UART bridge (not OTG) | 520 KB SRAM / 4 MB flash | `router()` tight | cheapest transport node; no gadget UI |
 
@@ -206,7 +206,7 @@ identity written by the Pi reads on the ESP32 and vice versa.*
 **Deliberately out of scope, with reasons:**
 - Browser-resident identity / WASM peer (round 3 shape B) — architecture
   stays A; revisit as its own design doc if wanted.
-- Screen/keyboard on the T-Deck — the USB-attached browser is the console;
+- No screen/keyboard on the XIAO kit — the USB-attached browser is the console;
   the e-ink screen is a later, optional surface.
 - BLE interfaces — ESP-NOW + LoRa cover the mesh; BLE-serial is a later
   adapter on the same `IByteStream` seam.

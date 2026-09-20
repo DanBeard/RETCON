@@ -163,7 +163,7 @@ microretcon/
 
 | Risk | Mitigation |
 |---|---|
-| SX1262 over SPI is the only genuinely new codec | start M2's radio bring-up on a POSIX-attached dev board (T-Deck as a USB peripheral to a Pi) before firmware integration |
+| SX1262 over SPI is the only genuinely new codec | start M2's radio bring-up on a POSIX-attached dev board (the XIAO+SX1262 kit as a USB peripheral to a Pi) before firmware integration |
 | shared-channel conflict (ESP-NOW + AP) | config-pinned channel + documented AP-wins rule; revisit when a dual-purpose consumer exists (same call the research doc made) |
 | 520 KB SRAM transport on classic ESP32 | footprint CI + PSRAM-first board choice (S3 primary) |
 | TinyUSB composite class interactions (CDC+MSC+NCM) | pin an Espressif examples-verified combo; if NCM+MSC fights, ship CDC+MSC first and NCM as its own sprint |

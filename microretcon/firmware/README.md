@@ -32,7 +32,20 @@ serves both). No menuconfig required: everything lives in
 - `components/micro_usb/` — TinyUSB composite (CDC + MSC)
 - `partitions.csv` — FAT region for the SPA + config, NVS for identity
 
-## Status
+## Status (M2 scaffold)
 
-Scaffold only — components are stubs. Sprint plan:
-`../../docs/MICRORETCON-SPRINTS.md` (M2 = this repo's bring-up).
+- Seams written, implementations pending: `IEspNowRadio` (espnow_radio.hpp,
+  open/broadcast/online, v2 MTU 1470), `SX1262` radio profile +
+  pin-map-stubbed seam (sx1262_radio.hpp — pins TO VERIFY against the
+  Seeed schematic; PirateBot no-invented-pins rule), USB composite
+  posture enum (usb_composite.hpp).
+- `main/micro_main.{hpp,cpp}` — the BoardPlan consumption shape: config
+  off FAT → crns parse (with [micro] via crns M1) → shared-channel rule
+  (AP wins over espnow_channel) → mode→profile pick lives HERE (crns M1
+  pinned decision 5), default Node.
+- POSIX CI: `scripts/host_checks.sh` — seam compile-check with host g++
+  -Werror + the `scripts/footprint_budget.sh` gate (vacuous until the
+  first real link map; budgets then only tighten, never loosen).
+- crns M1 config parser is in the crns tree (sprint/micro-m1-config-r1,
+  committed e71e9db); the template this firmware reads is
+  `retcon_profiles/micro.config`.

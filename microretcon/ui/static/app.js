@@ -65,11 +65,8 @@ document.querySelectorAll("menu[role=tablist] a").forEach((a) =>
 // -- status -------------------------------------------------------------------
 
 async function refreshStatus() {
-  const statusPanel = $("panel-status");
-  const loading = document.createElement("div");
-  loading.className = "loading";
-  loading.textContent = "loading…";
-  statusPanel.insertBefore(loading, statusPanel.firstChild);
+  const loading = $("status-loading");
+  if (loading) loading.hidden = false;
   try {
     const s = await api("/api/status");
     $("node-name").textContent = s.node_name;
@@ -91,8 +88,13 @@ async function refreshStatus() {
       $("identity-note").hidden = false;
     }
     configHash = s.config_hash;
-  } finally {
-    loading.remove();
+    if (loading) loading.hidden = true;
+  } catch (e) {
+    if (loading) {
+      loading.hidden = false;
+      loading.textContent = "failed to reach the device — retrying…";
+    }
+    throw e;
   }
 }
 
@@ -140,9 +142,9 @@ $("peers-body").addEventListener("click", async (ev) => {
   if (!btn) return;
   const dest = btn.dataset.dest;
   if (btn.dataset.act === "compose") {
-    $("compose-dest").value = dest;
+    showTab("messages");               // rebuilds the picker — order matters
+    $("compose-dest").value = dest;    // select AFTER the rebuild
     $("compose-dest-hash").value = "";
-    showTab("messages");
     $("compose-content").focus();
   } else if (btn.dataset.act === "path") {
     $("peers-hint").textContent = "path request sent…";

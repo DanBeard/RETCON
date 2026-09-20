@@ -57,3 +57,5 @@ button.danger:not(:disabled):active { box-shadow: inset -1px -1px #fff, inset 1p
 
 .tab-panel { padding: 8px; display: none; }
 .tab-panel[data-active] { display: block; }
+.loading { padding: 6px 2px; color: #444; font-style: italic; }
+#compose-dest:invalid, #compose-dest:has(option[value=""]:checked) { color: #444; }

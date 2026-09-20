@@ -53,7 +53,7 @@ function showTab(name) {
   }
   if (name === "status") refreshStatus();
   if (name === "peers") refreshPeers();
-  if (name === "messages") refreshInbox();
+  if (name === "messages") { refreshPeers(); refreshInbox(); }
 }
 document.querySelectorAll("menu[role=tablist] a").forEach((a) =>
   a.addEventListener("click", (ev) => {
@@ -65,26 +65,35 @@ document.querySelectorAll("menu[role=tablist] a").forEach((a) =>
 // -- status -------------------------------------------------------------------
 
 async function refreshStatus() {
-  const s = await api("/api/status");
-  $("node-name").textContent = s.node_name;
-  $("badge-mode").textContent = s.mode;
-  $("identity-hash").textContent = trunc(s.identity_hash, 16) + "…";
-  $("identity-hash").title = s.identity_hash;
-  $("identity-hash").onclick = () => navigator.clipboard?.writeText(s.identity_hash);
-  $("transport-state").textContent = s.transport_enabled ? "on (forwarding)" : "off";
-  $("interfaces").textContent = s.interfaces
-    .map((i) => `${i.name} (${i.online ? "up" : "down"})`)
-    .join(", ");
-  $("storage").textContent = `${s.storage.inbox_messages} msgs (cap ${s.storage.inbox_cap})`;
-  $("uptime").textContent = `up ${fmtAge(Math.floor(Date.now() / 1000) - s.uptime_s)} ago start`;
-  $("about-firmware").textContent = s.firmware;
-  $("sb-mock").textContent = s.mock ? "MOCK — real mesh, simulated USB" : "";
-  if (s.identity_location !== "device") {
-    // The explicitness rule: if this ever changes, the badge is where it shows.
-    $("badge-identity").textContent = "identity location: " + s.identity_location;
-    $("identity-note").hidden = false;
+  const statusPanel = $("panel-status");
+  const loading = document.createElement("div");
+  loading.className = "loading";
+  loading.textContent = "loading…";
+  statusPanel.insertBefore(loading, statusPanel.firstChild);
+  try {
+    const s = await api("/api/status");
+    $("node-name").textContent = s.node_name;
+    $("badge-mode").textContent = s.mode;
+    $("identity-hash").textContent = trunc(s.identity_hash, 16) + "…";
+    $("identity-hash").title = s.identity_hash;
+    $("identity-hash").onclick = () => navigator.clipboard?.writeText(s.identity_hash);
+    $("transport-state").textContent = s.transport_enabled ? "on (forwarding)" : "off";
+    $("interfaces").textContent = s.interfaces
+      .map((i) => `${i.name} (${i.online ? "up" : "down"})`)
+      .join(", ");
+    $("storage").textContent = `${s.storage.inbox_messages} msgs (cap ${s.storage.inbox_cap})`;
+    $("uptime").textContent = `up ${fmtAge(Math.floor(Date.now() / 1000) - s.uptime_s)} ago start`;
+    $("about-firmware").textContent = s.firmware;
+    $("sb-mock").textContent = s.mock ? "MOCK — real mesh, simulated USB" : "";
+    if (s.identity_location !== "device") {
+      // The explicitness rule: if this ever changes, the badge is where it shows.
+      $("badge-identity").textContent = "identity location: " + s.identity_location;
+      $("identity-note").hidden = false;
+    }
+    configHash = s.config_hash;
+  } finally {
+    loading.remove();
   }
-  configHash = s.config_hash;
 }
 
 // -- peers ----------------------------------------------------------------------
@@ -215,8 +224,8 @@ $("compose-dest").addEventListener("change", () => {
 $("btn-send").addEventListener("click", async () => {
   const statusEl = $("send-status");
   const dest = composeDest();
-  if (!dest || dest.length !== 64) {
-    statusEl.textContent = "pick a peer or paste a 64-hex-char destination";
+  if (!dest) {
+    statusEl.textContent = "choose a recipient first";
     statusEl.className = "send-status failed";
     return;
   }

@@ -56,7 +56,7 @@ which world it's in on the status page.
 
 // Peer (an entry of /api/peers)
 {
-  "dest_hash": "…",                     // 32-byte hex (the lxmf.delivery
+  "dest_hash": "…",                     // 32 hex chars (16 bytes — the lxmf.delivery
                                         // destination the peer announced)
   "name": "operator laptop",            // from announce app_data if packed
   "last_heard": 1234,                   // unix epoch
@@ -174,6 +174,9 @@ the badge is where the change shows — the field is the contract.
    last-heard; stale entries greyed after 2× announce interval. "Request
    path" button for no-path peers (the same `request_path` call the
    console's `sendfile` uses).
+   **[as-built note 2026-09-20]** the endpoint is
+   `POST /api/peers/<dest_hash>/request_path` (spec'd here only
+   indirectly); the *Ping* row action is deferred.
 3. **Messages** — two panes: list (title, source name/hash, age, size) +
    read view. Compose opens the same pane: dest picker fed from
    `/api/peers` (name → hash, or paste-hash), title, content (textarea,

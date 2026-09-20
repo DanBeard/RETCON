@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>MicroRETCON</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/files/css/98.css" />
+<link rel="stylesheet" href="/files/ui.css" />
+</head>
+<body>
+<div class="window" style="margin:16px auto; max-width:820px">
+  <div class="title-bar">
+    <div class="title-bar-text">MicroRETCON</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" disabled></button>
+      <button aria-label="Maximize" disabled></button>
+    </div>
+  </div>
+  <div class="window-body">
+
+    <div style="display:flex; align-items:center; gap:12px">
+      <img src="/files/images/logo.png" alt="RETCON" style="height:64px" />
+      <div style="flex:1">
+        <h3 id="node-name" style="margin:0">…</h3>
+        <div class="status-line">
+          <span class="badge" id="badge-mode">…</span>
+          <span class="badge" id="badge-identity">keys live on this device</span>
+          <span id="uptime" class="dim"></span>
+        </div>
+      </div>
+    </div>
+
+    <menu role="tablist">
+      <li role="tab" aria-selected="true"><a href="#status" data-tab="status">Status</a></li>
+      <li role="tab"><a href="#peers" data-tab="peers">Peers</a></li>
+      <li role="tab"><a href="#messages" data-tab="messages">Messages</a></li>
+      <li role="tab"><a href="#config" data-tab="config">Config</a></li>
+      <li role="tab"><a href="#about" data-tab="about">About</a></li>
+    </menu>
+
+    <!-- STATUS -->
+    <div class="tab-panel" id="panel-status" data-panel="status">
+      <fieldset>
+        <legend>Node</legend>
+        <div class="kv"><span>identity</span><code id="identity-hash" title="click to copy">…</code></div>
+        <div class="kv"><span>transport</span><span id="transport-state">…</span></div>
+        <div class="kv"><span>interfaces</span><span id="interfaces">…</span></div>
+        <div class="kv"><span>inbox</span><span id="storage">…</span></div>
+      </fieldset>
+      <div id="identity-note" class="identity-note">
+        <strong>This node's mesh identity lives on this device.</strong>
+        It survives browser clears, computer changes, and reboots.
+        The device holds the secret; this window is only a view.
+      </div>
+    </div>
+
+    <!-- PEERS -->
+    <div class="tab-panel" id="panel-peers" data-panel="peers" hidden>
+      <table class="peers-table">
+        <thead><tr><th>name</th><th>hash</th><th>heard</th><th>hops</th><th>path</th><th></th></tr></thead>
+        <tbody id="peers-body"><tr><td colspan="6">no peers heard yet</td></tr></tbody>
+      </table>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-request-path" class="secondary" disabled>Request path…</button>
+        <span class="hint" id="peers-hint"></span>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="tab-panel" id="panel-messages" data-panel="messages" hidden>
+      <div class="msg-grid">
+        <div class="msg-list-pane">
+          <table class="inbox-table">
+            <thead><tr><th>title</th><th>from</th><th>age</th></tr></thead>
+            <tbody id="inbox-body"><tr><td colspan="3">empty</td></tr></tbody>
+          </table>
+          <div class="pager">
+            <button id="inbox-older" class="secondary" disabled>&laquo; Older</button>
+            <button id="inbox-newer" class="secondary" disabled>&raquo; Newer</button>
+          </div>
+        </div>
+        <div class="msg-read">
+          <div id="msg-read-view" class="msg-body">select a message…</div>
+        </div>
+      </div>
+      <fieldset id="compose" style="margin-top:10px">
+        <legend>Compose</legend>
+        <div class="field-row">
+          <label for="compose-dest">To</label>
+          <select id="compose-dest"></select>
+          <label style="flex:1">or paste hash
+            <input id="compose-dest-hash" type="text" placeholder="32-byte hex" style="width:100%" />
+          </label>
+        </div>
+        <div class="field-row">
+          <label for="compose-title">Title</label>
+          <input id="compose-title" type="text" style="flex:1" />
+        </div>
+        <div class="field-row-stacked">
+          <label for="compose-content">Message</label>
+          <textarea id="compose-content" rows="6"></textarea>
+          <span class="hint"><span id="compose-size">0</span> bytes · limit <span id="compose-limit">…</span></span>
+        </div>
+        <div class="field-row" style="justify-content:space-between">
+          <span id="send-status" class="send-status"></span>
+          <button id="btn-send" class="default">Send</button>
+        </div>
+      </fieldset>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="tab-panel" id="panel-config" data-panel="config" hidden>
+      <div class="field-row-stacked">
+        <label for="config-text">Config file <span class="hint">(same file the Pi uses; applied live)</span></label>
+        <textarea id="config-text" rows="22" spellcheck="false"></textarea>
+      </div>
+      <div class="field-row" style="margin-top:6px">
+        <span id="config-status" class="send-status"></span>
+        <button id="btn-config-save" class="default" style="margin-left:auto">Save</button>
+      </div>
+      <fieldset style="margin-top:12px">
+        <legend>Device</legend>
+        <div class="field-row">
+          <button id="btn-announce">Announce now</button>
+          <button id="btn-reboot" class="danger">Reboot device…</button>
+        </div>
+      </fieldset>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="tab-panel" id="panel-about" data-panel="about" hidden>
+      <p><strong>MicroRETCON</strong> — the same mesh as the big RETCON nodes,
+      in a pocket. Everything here talks plain Reticulum.</p>
+      <p>Attach this device to any computer over USB and it appears as a
+      network + a drive. This page is the drive's window onto the node.</p>
+      <p>Reticulum by <a href="https://reticulum.network" target="_blank">Mark Qvist</a> ·
+      stack: <a href="https://github.com/dbeard/crns" target="_blank">crns</a> ·
+      <span id="about-firmware">…</span></p>
+    </div>
+
+  </div>
+  <div class="status-bar">
+    <div class="status-bar-field" id="sb-conn">connecting…</div>
+    <div class="status-bar-field" id="sb-mock"> </div>
+  </div>
+</div>
+
+<script src="/files/app.js"></script>
+</body>
+</html>

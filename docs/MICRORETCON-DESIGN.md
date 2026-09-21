@@ -32,7 +32,8 @@ board with no python. The user-facing contract:
 
 | Board | Radios | USB | RAM/flash | Profile | Notes |
 |---|---|---|---|---|---|
-| **Seeed XIAO ESP32S3 + Wio-SX1262 kit** (primary) | SX1262 LoRa (external module), WiFi, BLE | USB-C (S3 native) | 8 MB PSRAM / 16 MB flash | `node()` w/ PSRAM | the "hand to a person" device — tiny, cheap, Meshtastic-ecosystem kit; no screen (USB console IS the UI) |
+| **Seeed XIAO ESP32S3 + Wio-SX1262 kit** (primary client) | SX1262 LoRa (external module), WiFi, BLE | USB-C (S3 native) | 8 MB PSRAM / 16 MB flash | `node()` w/ PSRAM | the "hand to a person" device — tiny, cheap, Meshtastic-ecosystem kit; no screen (USB console IS the UI). Higher draw — NOT the solar 24/7 candidate |
+| **RAK4630 on RAK19003** (transport node) | SX1262 LoRa (on-module), BLE 5 | USB-C CDC (nRF52840 native) | 1 MB flash / **256 KB RAM** | `minimal()` (20.3 KB measured) | 24/7 solar transport; LoRa+BLE+USB-serial only — no WiFi, no ESP-NOW, no JS. **This target has its own doc: `docs/MICRORETCON-RAK4630.md`** |
 | **LILYGO T3-S3** | SX1262, WiFi, BLE | USB-OTG | 8 MB PSRAM variants | `router()` | transport-first board |
 | **classic ESP32 + SX1276 hat** | LoRa via SPI, WiFi (no BLE5) | UART bridge (not OTG) | 520 KB SRAM / 4 MB flash | `router()` tight | cheapest transport node; no gadget UI |
 

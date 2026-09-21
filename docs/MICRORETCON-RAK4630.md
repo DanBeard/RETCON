@@ -93,11 +93,62 @@ pure forwarding. The client experience lives on the paired host.
   first, optimise power second) — but the acceptance metric includes the
   solar+battery 24/7 posture, not just "it forwards".
 
+## Pin facts (VERIFIED 2026-09-20 — meshtastic/firmware
+`variants/nrf52840/rak4631/{variant.h,variant.cpp,platformio.ini}`;
+SKU: RAKwireless Mini Meshtastic Starter Kit US915, RAK19003 + RAK4631,
+SKU 115093)
+
+Kit region: **US915** — the rnode radio params in
+`retcon_profiles/micro.config` (914.875 MHz / BW 125k / SF8 / CR5 / 14
+dBm) are US915-compatible; Meshtastic's own US915 default is 906.875 MHz
+SF11 for public LongFast, but a private transport can use the RETCON
+rnode numbers. Config file stays the source of truth.
+
+### SX1262 (on-module, SPI1 — P1.n pins, Arduino GPIO numbers)
+
+| Signal | nRF52 pin | Arduino GPIO |
+|---|---|---|
+| NSS | P1.10 | 42 |
+| SCK | P1.11 | 43 |
+| MOSI | P1.12 | 44 |
+| MISO | P1.13 | 45 |
+| BUSY | P1.14 | 46 |
+| DIO1 | P1.15 | 47 |
+| NRESET | P1.06 | 38 |
+
+**Init requirements from the variant header (load-bearing):**
+- **DIO2 controls the antenna switch** — no TXEN/RXEN GPIOs (P1.07 is
+  wired to the switch but MUST NOT be initialised; the header comment is
+  emphatic: GPIO 39/TXEN may not be defined or the radio fails).
+- **DIO3 controls the TCXO power**.
+- Use the **DCDC regulator**, not the LDO.
+- `SX126X_POWER_EN = GPIO 37` (P1.02?) powers the module rail.
+
+### Other pins of record
+- LED1 (green) = GPIO 35, LED2 (blue) = GPIO 36, active HIGH.
+- Battery: ADC on A0 (VBAT via divider, 12-bit, ×1.73 multiplier,
+  3.0 V ref) — the solar-soak acceptance needs this.
+- nRF52 Arduino SPI pins 43/44/45 = SCK/MOSI/MISO (the primary SPI bus;
+  SPI1 at 29/30/3 is the free one for expansion slots).
+
+### Platform facts
+- Meshtastic architecture: `nrf52840`, board `wiscore_rak4631`,
+  actively supported, support-level 1.
+- Toolchain: PlatformIO `nrf52840_base` env (Zephyr-less — Meshtastic's
+  Nordic build is Arduino-core-on-nRF52, NOT NCS/Zephyr). This matters
+  for R1's toolchain decision below.
+
 ## Firmware target (nRF52)
 
-- Toolchain: **nRF Connect SDK / Zephyr** (or bare `nrfx` — decide at the
-  M2-R brief; Meshtastic's platformio Nordic platform is the known-good
-  reference build).
+- Toolchain: **decision point, now informed by the variant lookup** —
+  Meshtastic's `nrf52840_base` PlatformIO env is **Arduino-core on
+  nRF52, not Zephyr/NCS** (board `wiscore_rak4631`, actively supported,
+  support-level 1). The Arduino-nRF52 core gives USB CDC + BLE UART out
+  of the box, which is 80% of R1. Recommendation: start Meshtastic-shaped
+  (PlatformIO + Arduino-nRF52 core) for R1 bring-up, and only reach for
+  Zephyr/NCS if a need appears that the Arduino core can't express.
+  crns on nRF52 then needs a thin PAL over the Arduino-core primitives
+  (same shape as the ESP32 PAL ports rWatch/piratebot did).
 - crns on nRF52: the core is portable C++20 (no heap/threads/exceptions)
   and BearSSL is pure C — the **posix PAL is the mismatch** (sockets/
   threads/files). The seam pattern from `pal/espnow` (pure logic behind

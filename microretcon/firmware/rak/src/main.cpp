@@ -12,6 +12,18 @@
 // hardcodes the defaults as constants; R2 wires the crns parser in.
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>  // USB CDC (the wire the Pi Zero rides)
+#include <RadioLib.h>          // SX1262 driver (meshtastic's proven choice)
+
+// RAK4631 SX1262 init rules (meshtastic variants/nrf52840/rak4631/variant.h
+// + SX126xInterface.cpp): DIO2 IS the RF switch; DIO3 powers the TCXO at
+// 1.8 V; DCDC regulator (useRegulatorLDO=false). variant.h carries the
+// SX126X_DIO2_AS_RF_SWITCH + SX126X_DIO3_TCXO_VOLTAGE 1.8 defines.
+#ifndef SX126X_DIO2_AS_RF_SWITCH
+#define SX126X_DIO2_AS_RF_SWITCH
+#endif
+#ifndef SX126X_DIO3_TCXO_VOLTAGE
+#define SX126X_DIO3_TCXO_VOLTAGE 1.8
+#endif
 
 // SX1262 pins come from variant.h (vendored in ../variant/, verified from
 // meshtastic/firmware variants/nrf52840/rak4631 — see
@@ -22,6 +34,13 @@
 #include "variant/variant.h"
 
 // Battery ADC uses variant.h's A0/PIN_A0 (12-bit, 3.0 V ref, ×1.73).
+
+// Radio object: RadioLib SX1262 over the Arduino SPI (pins from variant.h).
+// Module(cs, irq, rst, busy) — RadioLib drives NSS itself.
+static Module radio_mod = Module(SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
+static SX1262 radio = SX1262(&radio_mod);
+
+static bool lora_ok = false;
 
 static void lora_pins_setup() {
     pinMode(SX126X_POWER_EN, OUTPUT);
@@ -47,6 +66,38 @@ static void lora_pins_setup() {
     Serial.print(" (0=ready), reset released after ");
     Serial.print(waited);
     Serial.println(" ms");
+
+    // SPI bus: the primary Arduino SPI maps to pins 43/44/45 (SCK/MOSI/
+    // MISO) per variant.h. RadioLib drives NSS itself via its Module.
+    SPI.begin();
+
+    // R1 handshake: begin() = hardware reset + STANDBY + packet config with
+    // the DIO3-TCXO + DCDC rules; then the chip answers GetStatus-style
+    // queries. Params from retcon_profiles/micro.config (US915).
+    const float freq_mhz = 914.875f;
+    const float bw_khz = 125.0f;
+    const uint8_t sf = 8, cr = 5;
+    const uint8_t sync_word = 0x12;  // Reticulum/RNode private sync word? R2 wires config; R1 uses RadioLib LoRaWAN-public default check only
+    const int8_t power_dbm = 14;
+    const uint16_t preamble = 8;
+
+    int state = radio.begin(freq_mhz, bw_khz, sf, cr, sync_word, power_dbm, preamble,
+                        SX126X_DIO3_TCXO_VOLTAGE, /*useRegulatorLDO=*/false);
+    if (state == RADIOLIB_ERR_NONE) {
+        Serial.println("[lora] SX1262 begin() OK");
+        lora_ok = true;
+        // The variant.h mandate: DIO2 as RF switch (after begin — RadioLib
+        // resets it inside begin()).
+        state = radio.setDio2AsRfSwitch(true);
+        Serial.print("[lora] setDio2AsRfSwitch: ");
+        Serial.println(state == RADIOLIB_ERR_NONE ? "ok" : "FAILED");
+        // begin() returning ERR_NONE already proves SPI is alive end-to-end
+        // (reset → config → read-back through the whole command set).
+        digitalWrite(LED_BLUE, HIGH);
+    } else {
+        Serial.print("[lora] begin FAILED code ");
+        Serial.println(state);
+    }
 }
 
 static uint32_t boot_ms = 0;
@@ -78,10 +129,22 @@ void setup() {
 }
 
 void loop() {
-    // Heartbeat + battery telemetry every 10 s (the solar-soak sensor).
+    // Heartbeat + battery telemetry + a LoRa TX ping every 10 s.
     static uint32_t last = 0;
     if (millis() - last > 10000) {
         last = millis();
+        if (lora_ok) {
+            // One unmodulated-carrier-off transmit: proves TX power path +
+            // DIO2 antenna switch under firmware control.
+            String ping = "micro-r1 ";
+            ping += (millis() - boot_ms) / 1000;
+            ping += "s";
+            int st = radio.transmit(ping);
+            Serial.print("[lora] tx '");
+            Serial.print(ping);
+            Serial.print("' -> ");
+            Serial.println(st == RADIOLIB_ERR_NONE ? "sent" : String("err ") + st);
+        }
         analogReadResolution(12);
         // 3.0 V ref, divider multiplier 1.73 (variant.h battery constants).
         uint32_t mv = (analogRead(A0) * 3000UL * 173UL) / (4096UL * 100UL);

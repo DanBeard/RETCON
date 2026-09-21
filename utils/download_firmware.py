@@ -42,5 +42,9 @@ def download_latest_release_artifacts(owner, repo):
 if __name__ == "__main__":
     download_latest_release_artifacts("markqvist","RNode_Firmware")
     download_latest_release_artifacts("attermann","microReticulum_Firmware")
+    # MicroRETCON RAK4631 transport node (crns-based, RETCON's own build).
+    # Served by the client UI's /flash page; graceful when the release
+    # doesn't carry it yet (the flasher page degrades to drag-and-drop).
+    download_latest_release_artifacts("DanBeard","RETCON")
     download_latest_release_artifacts("liberatedsystems","RNode_Firmware_CE")
     

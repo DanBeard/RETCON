@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RETCON — Flash MicroRETCON</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/98.css') }}" />
+    <style>
+      .mono { font-family: monospace; font-size: 12px; }
+      .drive-list { list-style: none; padding-left: 0; }
+      .drive-list li { padding: 4px 0; }
+    </style>
+  </head>
+  <body style="background-color:#008080">
+    <div class="window" style="margin: 20px auto; width: 640px">
+      <div class="title-bar">
+        <div class="title-bar-text">MicroRETCON — Flash a Transport Node (RAK4631)</div>
+        <div class="title-bar-controls"><button aria-label="Close" onclick="history.back()"></button></div>
+      </div>
+      <div class="window-body">
+        <h3>What this is</h3>
+        <p>
+          This flashes the <b>MicroRETCON transport firmware</b> onto a
+          <b>RAK4631</b> module (RAK19003 base) — the solar-powered 24/7
+          LoRa+BLE+USB transport node. Plug the board into this Pi's USB
+          port; the Pi does the rest.
+        </p>
+
+        <fieldset>
+          <legend>Step 1 — put the board in bootloader mode</legend>
+          <p>Double-tap the <b>reset</b> button on the RAK19003. The board
+          re-enumerates as a USB mass-storage drive (its built-in UF2
+          bootloader).</p>
+          <button onclick="scan()" id="scan-btn">Scan for the board</button>
+          <span id="scan-result" style="margin-left:8px"></span>
+          <ul class="drive-list" id="drives">
+            {% for d in drives %}
+            <li>💾 <b>{{ d }}</b> <button onclick="flashTo('{{ d }}')">Flash this drive</button></li>
+            {% else %}
+            <li><i>no UF2 bootloader drive found yet — double-tap reset, then Scan</i></li>
+            {% endfor %}
+          </ul>
+          <p class="mono">application-mode serial ports: 
+            {% for p in ports %}<code>{{ p.device }}</code> ({{ p.desc }}) {% else %}<i>none detected</i>{% endfor %}
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Step 2 — flash</legend>
+          {% if uf2_name %}
+          <p>Firmware: <b class="mono">{{ uf2_name }}</b></p>
+          <button onclick="flashSelected()" id="flash-btn" {% if not drives %}disabled{% endif %}>
+            Flash to the selected drive
+          </button>
+          <p id="status"></p>
+          {% else %}
+          <p><b>No firmware artifact baked into this image.</b>
+          Build it with <code class="mono">microretcon/firmware/rak/build-uf2.sh</code>,
+          or grab one from the <a href="https://retcon.mu/retcon">RETCON downloads page</a> and drag it onto the drive yourself.</p>
+          {% endif %}
+        </fieldset>
+
+        <fieldset>
+          <legend>Manual fallback</legend>
+          <p>Any OS: download the UF2 and drag it onto the board's drive:
+          <a href="/flash/uf2">{{ uf2_name or "(no artifact)" }}</a>
+          — or flash from a machine with toolchain:
+          <code class="mono">pio run -e rak4631_micro -t upload</code></p>
+        </fieldset>
+      </div>
+    </div>
+    <script>
+      let selectedDrive = "{{ drives[0] if drives else '' }}";
+      function selectDrive(d) { selectedDrive = d; document.querySelectorAll('.drive-list li').forEach(li => li.style.background = ''); event.target.closest('li').style.background = '#00008022'; }
+      async function scan() {
+        document.getElementById('scan-btn').disabled = true;
+        const r = await fetch('/flash/scan');
+        const j = await r.json();
+        const ul = document.getElementById('drives');
+        ul.innerHTML = '';
+        if (!j.drives.length) {
+          ul.innerHTML = '<li><i>no UF2 bootloader drive found — double-tap reset and scan again</i></li>';
+        }
+        j.drives.forEach(d => {
+          const li = document.createElement('li');
+          li.innerHTML = `💾 <b>${d}</b> <button onclick='flashTo("${d}")'>Flash this drive</button>`;
+          ul.appendChild(li);
+        });
+        document.getElementById('scan-result').textContent = j.drives.length ? `${j.drives.length} drive(s) found` : 'none found';
+        document.getElementById('flash-btn').disabled = !j.drives.length;
+        document.getElementById('scan-btn').disabled = false;
+      }
+      async function flashTo(drive) {
+        const st = document.getElementById('status');
+        st.textContent = 'copying firmware to ' + drive + ' …';
+        const r = await fetch('/flash/copy', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ drive })
+        });
+        const j = await r.json();
+        st.textContent = j.message;
+      }
+      function flashSelected() { if (selectedDrive) flashTo(selectedDrive); }
+    </script>
+  </body>
+</html>
